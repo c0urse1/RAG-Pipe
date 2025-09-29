@@ -1,16 +1,16 @@
-from __future__ import annotations
-
-from abc import ABC, abstractmethod
-from typing import Iterable, Sequence
-
-from ...domain.types import DocumentId, ChunkId
+from typing import Protocol, Sequence
+from dataclasses import dataclass
 
 
-class VectorStorePort(ABC):
-    @abstractmethod
-    def upsert(self, ids: Sequence[ChunkId], embeddings: Sequence[Sequence[float]], metadatas: Sequence[dict] | None = None) -> None:
-        ...
+@dataclass(frozen=True)
+class RetrievedChunk:
+    chunk_id: str
+    text: str
+    score: float
+    metadata: dict
 
-    @abstractmethod
-    def query(self, embedding: Sequence[float], top_k: int) -> list[tuple[ChunkId, float, dict]]:
-        ...
+
+class VectorStorePort(Protocol):
+    def add(self, texts: Sequence[str], metadatas: Sequence[dict]) -> None: ...
+    def search(self, query_embedding: Sequence[float], top_k: int) -> Sequence[RetrievedChunk]: ...
+    def persist(self) -> None: ...

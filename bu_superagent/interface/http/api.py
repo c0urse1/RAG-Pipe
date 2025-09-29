@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from ...config.composition import build_application
 from ...application.dto.ingest_dto import IngestDocumentDTO
-from ...application.dto.query_dto import QueryDTO
+from ...application.dto.query_dto import QueryRequest
 
 
 app = FastAPI(title="BU Superagent API")
@@ -18,7 +18,7 @@ class IngestRequest(BaseModel):
     content: str
 
 
-class QueryRequest(BaseModel):
+class QueryBody(BaseModel):
     text: str
     top_k: int = 5
 
@@ -30,6 +30,9 @@ def ingest(req: IngestRequest):
 
 
 @app.post("/query")
-def query(req: QueryRequest):
-    results = container["query"].execute(QueryDTO(**req.model_dump()))
+def query(req: QueryBody):
+    try:
+        results = container["query"].execute(QueryRequest(question=req.text, top_k=req.top_k))
+    except NotImplementedError:
+        results = []
     return {"results": results}

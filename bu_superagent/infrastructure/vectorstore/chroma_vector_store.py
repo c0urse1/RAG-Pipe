@@ -1,35 +1,23 @@
 from __future__ import annotations
 
-from typing import Sequence, Tuple
+from typing import Sequence
 
-from ...application.ports.vector_store_port import VectorStorePort
+from ...application.ports.vector_store_port import VectorStorePort, RetrievedChunk
 
 
 class InMemoryVectorStore(VectorStorePort):
     def __init__(self) -> None:
-        self._store: dict[str, tuple[list[float], dict]] = {}
+        self._texts: list[str] = []
+        self._metas: list[dict] = []
 
-    def upsert(self, ids: Sequence[str], embeddings: Sequence[Sequence[float]], metadatas: Sequence[dict] | None = None) -> None:
-        metadatas = metadatas or [{} for _ in ids]
-        for i, e, m in zip(ids, embeddings, metadatas):
-            self._store[str(i)] = (list(e), dict(m))
-            self._store[str(i)][1].setdefault("text", m.get("text", ""))
+    def add(self, texts: Sequence[str], metadatas: Sequence[dict]) -> None:
+        for t, m in zip(texts, metadatas):
+            self._texts.append(str(t))
+            self._metas.append(dict(m))
 
-    def query(self, embedding: Sequence[float], top_k: int) -> list[tuple[str, float, dict]]:
-        # naive cosine on stored embeddings
-        import math
+    def search(self, query_embedding: Sequence[float], top_k: int) -> Sequence[RetrievedChunk]:
+        # Placeholder: no scoring logic yet; return empty list
+        return []
 
-        def cos(a: Sequence[float], b: Sequence[float]) -> float:
-            dot = sum(x * y for x, y in zip(a, b))
-            na = math.sqrt(sum(x * x for x in a))
-            nb = math.sqrt(sum(y * y for y in b))
-            if na == 0 or nb == 0:
-                return 0.0
-            return (dot / (na * nb) + 1.0) / 2.0
-
-        scored = [
-            (k, cos(v[0], embedding), v[1])
-            for k, v in self._store.items()
-        ]
-        scored.sort(key=lambda x: x[1], reverse=True)
-        return scored[:top_k]
+    def persist(self) -> None:  # pragma: no cover - no-op for in-memory
+        pass

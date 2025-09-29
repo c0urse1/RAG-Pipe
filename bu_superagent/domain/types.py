@@ -1,24 +1,15 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import Generic, TypeVar, Union, NewType
+from typing import Generic, TypeVar, Optional
 
 T = TypeVar("T")
-E = TypeVar("E")
+E = TypeVar("E", bound=BaseException)
 
 
-DocumentId = NewType("DocumentId", str)
-ChunkId = NewType("ChunkId", str)
+@dataclass(frozen=True)
+class Result(Generic[T, E]):
+    value: Optional[T] = None
+    error: Optional[E] = None
 
-
-@dataclass(slots=True)
-class Ok(Generic[T]):
-    value: T
-
-
-@dataclass(slots=True)
-class Err(Generic[E]):
-    error: E
-
-
-Result = Union[Ok[T], Err[E]]
+    @property
+    def is_ok(self) -> bool:
+        return self.error is None

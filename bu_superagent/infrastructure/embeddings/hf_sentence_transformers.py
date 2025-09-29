@@ -26,7 +26,7 @@ class SimpleHashEmbedding(EmbeddingPort):
         norm = math.sqrt(sum(x * x for x in vec)) or 1.0
         return [x / norm for x in vec]
 
-    def embed_text(self, text: str) -> Sequence[float]:
+    def embed_query(self, text: str) -> Sequence[float]:
         return self._embed(text)
 
     def embed_texts(self, texts: Sequence[str]) -> list[Sequence[float]]:

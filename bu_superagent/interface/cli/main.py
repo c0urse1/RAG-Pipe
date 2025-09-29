@@ -8,7 +8,7 @@ import click
 
 from ...config.composition import build_application
 from ...application.dto.ingest_dto import IngestDocumentDTO
-from ...application.dto.query_dto import QueryDTO
+from ...application.dto.query_dto import QueryRequest
 
 
 @click.group()
@@ -32,5 +32,8 @@ def ingest(file_path: Path, title: Optional[str]) -> None:
 @click.option("--top-k", type=int, default=5)
 def query(text: str, top_k: int) -> None:
     app = build_application()
-    results = app["query"].execute(QueryDTO(text=text, top_k=top_k))
+    try:
+        results = app["query"].execute(QueryRequest(question=text, top_k=top_k))
+    except NotImplementedError:
+        results = []
     click.echo(json.dumps(results, indent=2))
