@@ -1,0 +1,20 @@
+[importlinter]
+root_package = bu_superagent
+include_external_packages = False
+
+[contract:layers]
+name = Enforce Clean Architecture layers
+type = layers
+layers =
+    bu_superagent.domain
+    bu_superagent.application
+    bu_superagent.infrastructure
+    bu_superagent.interface
+ignore_imports =
+    # (optional) einzelne Ausnahmen
+
+# Regel: Nur Importe nach innen sind erlaubt:
+# - interface darf application (und darunter) importieren
+# - infrastructure darf application/domain importieren
+# - application darf domain importieren
+# - domain darf NIEMANDEN außerhalb von domain importieren
