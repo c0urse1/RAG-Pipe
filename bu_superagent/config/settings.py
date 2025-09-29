@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
-import os
 
 
-@dataclass(slots=True, frozen=True)
-class Settings:
-    embedding_dim: int = int(os.getenv("EMBEDDING_DIM", "64"))
+@dataclass(frozen=True)
+class AppSettings:
+    vector_dir: str = "var/vector_store/e5_large"
+    embedding_model: str = "intfloat/multilingual-e5-large-instruct"

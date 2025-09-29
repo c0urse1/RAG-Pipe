@@ -23,7 +23,7 @@ dev = [
 ]
 
 [project.scripts]
-bu-superagent = "bu_superagent.interface.cli.main:cli"
+bu-superagent = "bu_superagent.interface.cli.main:main"
 
 [tool.pytest.ini_options]
 minversion = "8.0"
