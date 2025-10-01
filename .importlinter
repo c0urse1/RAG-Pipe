@@ -2,19 +2,34 @@
 root_package = bu_superagent
 include_external_packages = False
 
-[contract:layers]
-name = Enforce Clean Architecture layers
+[contract:layers_core]
+name = Core layering (application -> domain)
 type = layers
 layers =
-    bu_superagent.domain
     bu_superagent.application
-    bu_superagent.infrastructure
-    bu_superagent.interface
-ignore_imports =
-    # (optional) einzelne Ausnahmen
+    bu_superagent.domain
 
-# Regel: Nur Importe nach innen sind erlaubt:
-# - interface darf application (und darunter) importieren
-# - infrastructure darf application/domain importieren
-# - application darf domain importieren
-# - domain darf NIEMANDEN außerhalb von domain importieren
+[contract:forbidden_infra_inners]
+name = Forbid imports to infrastructure from inner layers
+type = forbidden
+source_modules =
+    bu_superagent.application
+    bu_superagent.domain
+    bu_superagent.interface
+forbidden_modules =
+    bu_superagent.infrastructure
+
+[contract:independence_edge]
+name = Interface and Infrastructure independence
+type = independence
+modules =
+    bu_superagent.interface
+    bu_superagent.infrastructure
+
+[contract:forbidden_interface_to_domain]
+name = Forbid interface -> domain
+type = forbidden
+source_modules =
+    bu_superagent.interface
+forbidden_modules =
+    bu_superagent.domain
