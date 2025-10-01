@@ -1,4 +1,4 @@
-from typing import Protocol, Sequence
+from typing import Protocol, Sequence, Tuple
 from dataclasses import dataclass
 
 
