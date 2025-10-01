@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, TypeVar, Optional
+from typing import Generic, TypeVar
 
 T = TypeVar("T")
 E = TypeVar("E", bound=BaseException)
@@ -7,8 +7,8 @@ E = TypeVar("E", bound=BaseException)
 
 @dataclass(frozen=True)
 class Result(Generic[T, E]):
-    value: Optional[T] = None
-    error: Optional[E] = None
+    value: T | None = None
+    error: E | None = None
 
     @property
     def is_ok(self) -> bool:

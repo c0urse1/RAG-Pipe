@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Sequence, Mapping
+from collections.abc import Mapping, Sequence
 
 from ..dto.ingest_dto import IngestDocumentDTO
 from ..ports.embedding_port import EmbeddingPort

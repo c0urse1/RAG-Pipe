@@ -1,5 +1,6 @@
-from typing import Protocol, Sequence, Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Protocol
 
 
 @dataclass(frozen=True)

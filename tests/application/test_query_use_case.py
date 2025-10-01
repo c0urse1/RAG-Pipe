@@ -1,28 +1,25 @@
 import pytest
-from bu_superagent.application.use_cases.query_knowledge_base import QueryKnowledgeBase
 from bu_superagent.application.dto.query_dto import QueryRequest
+from bu_superagent.application.use_cases.query_knowledge_base import QueryKnowledgeBase
 
 
-class _NoopEmbedder:
-    def embed_texts(self, texts):  # type: ignore[no-untyped-def]
+class DummyVectorStore:
+    def add(self, texts, metadatas): ...
+    def search(self, query_embedding, top_k):
         return []
 
-    def embed_query(self, text):  # type: ignore[no-untyped-def]
-        return []
+    def persist(self): ...
 
 
-class _NoopVectorStore:
-    def add(self, texts, metadatas):  # type: ignore[no-untyped-def]
-        pass
+class DummyEmbedding:
+    def embed_texts(self, texts):
+        return [[0.0] * 4 for _ in texts]
 
-    def search(self, query_embedding, top_k):  # type: ignore[no-untyped-def]
-        return []
-
-    def persist(self):  # type: ignore[no-untyped-def]
-        pass
+    def embed_query(self, text):
+        return [0.0] * 4
 
 
-def test_query_placeholder_raises():
-    uc = QueryKnowledgeBase(vector_store=_NoopVectorStore(), embedding=_NoopEmbedder())
+def test_query_use_case_contract():
+    uc = QueryKnowledgeBase(vector_store=DummyVectorStore(), embedding=DummyEmbedding())
     with pytest.raises(NotImplementedError):
-        uc.execute(QueryRequest(question="beta", top_k=2))
+        uc.execute(QueryRequest(question="Was ist BU?"))

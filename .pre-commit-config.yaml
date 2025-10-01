@@ -1,0 +1,53 @@
+repos:
+  # Lint (inkl. Import-Regeln) + Format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  # Formatierung zuletzt
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        args: ["--line-length=100"]
+
+  # Typprüfung
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        args: ["--config-file=mypy.ini"]
+        files: ^bu_superagent/
+        additional_dependencies: []
+
+  # Architektur-Layering
+  - repo: local
+    hooks:
+      - id: import-linter
+        name: import-linter
+        entry: lint-imports --config importlinter.ini
+        language: python
+        additional_dependencies: ["import-linter>=2.0"]
+        pass_filenames: false
+
+  # Leichte Checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # Tests (nur beim Push, damit Commits schnell bleiben)
+  - repo: local
+    hooks:
+      - id: pytest-on-push
+        name: pytest (with coverage)
+        entry: python -m pytest -q
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
