@@ -4,5 +4,5 @@
 """
 
 
-def build_query_use_case():
+def build_query_use_case() -> None:
     raise NotImplementedError

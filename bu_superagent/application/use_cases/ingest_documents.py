@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Sequence, Mapping
 
 from ..dto.ingest_dto import IngestDocumentDTO
 from ..ports.embedding_port import EmbeddingPort
@@ -19,7 +19,7 @@ class IngestDocumentsUseCase:
 
     def execute(self, docs: Sequence[IngestDocumentDTO]) -> None:
         chunks: list[str] = []
-        metas: list[dict] = []
+        metas: list[Mapping[str, object]] = []
         for d in docs:
             parts = simple_split(d.content)
             for idx, part in enumerate(parts):

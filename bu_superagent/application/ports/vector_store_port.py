@@ -1,4 +1,4 @@
-from typing import Protocol, Sequence, Tuple
+from typing import Protocol, Sequence, Mapping
 from dataclasses import dataclass
 
 
@@ -7,10 +7,10 @@ class RetrievedChunk:
     chunk_id: str
     text: str
     score: float
-    metadata: dict
+    metadata: Mapping[str, object]
 
 
 class VectorStorePort(Protocol):
-    def add(self, texts: Sequence[str], metadatas: Sequence[dict]) -> None: ...
+    def add(self, texts: Sequence[str], metadatas: Sequence[Mapping[str, object]]) -> None: ...
     def search(self, query_embedding: Sequence[float], top_k: int) -> Sequence[RetrievedChunk]: ...
     def persist(self) -> None: ...
