@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = bu_superagent
+
+[report]
+show_missing = True
+fail_under = 75
