@@ -1,17 +1,24 @@
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True)
 class RetrievedChunk:
-    chunk_id: str
+    id: str
     text: str
     score: float
-    metadata: Mapping[str, object]
+    metadata: dict[str, object]
 
 
 class VectorStorePort(Protocol):
-    def add(self, texts: Sequence[str], metadatas: Sequence[Mapping[str, object]]) -> None: ...
-    def search(self, query_embedding: Sequence[float], top_k: int) -> Sequence[RetrievedChunk]: ...
-    def persist(self) -> None: ...
+    def upsert(
+        self,
+        ids: Sequence[str],
+        vectors: Sequence[Sequence[float]],
+        payloads: Sequence[dict[str, object]],
+    ) -> None: ...
+
+    def search(self, query_vector: Sequence[float], top_k: int = 5) -> list[RetrievedChunk]: ...
+
+    def ensure_collection(self, name: str, dim: int) -> None: ...

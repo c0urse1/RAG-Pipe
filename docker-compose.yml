@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./var/qdrant:/qdrant/storage
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: >
+      --model meta-llama/Meta-Llama-3.1-8B-Instruct
+      --dtype float16
+      --max-model-len 8192
+      --trust-remote-code
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
