@@ -8,6 +8,7 @@ from bu_superagent.application.use_cases.ingest_documents import IngestDocuments
 @dataclass
 class FakeLoader:
     text: str = "Titel\n\nDas ist ein Text. Er ist kurz."
+
     def load(self, path: str) -> DocumentPayload:  # type: ignore[override]
         return DocumentPayload(text=self.text, title="Titel", source_path=path)
 
@@ -15,6 +16,7 @@ class FakeLoader:
 class FakeEmbed:
     def embed_texts(self, texts, kind="mxbai"):
         return [[0.0, 1.0, 0.0] for _ in texts]
+
 
 class FakeVS:
     def __init__(self):

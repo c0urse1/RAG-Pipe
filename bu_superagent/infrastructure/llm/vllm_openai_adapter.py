@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import Sequence
+from collections.abc import Sequence
 
 from openai import OpenAI
 
-from bu_superagent.application.ports.llm_port import LLMPort, ChatMessage, LLMResponse
+from bu_superagent.application.ports.llm_port import ChatMessage, LLMPort, LLMResponse
 
 
 @dataclass
@@ -29,4 +29,4 @@ class VLLMOpenAIAdapter(LLMPort):
             return LLMResponse(text=choice.message.content or "", finish_reason=choice.finish_reason)
         except Exception as ex:  # noqa: BLE001
             # Übersetze externe Fehler in domänenspezifische – hier kurz gehalten:
-            raise RuntimeError(f"LLM communication failed: {ex}")  # später: typisierte Errors
+            raise RuntimeError(f"LLM communication failed: {ex}") from ex  # später: typisierte Errors

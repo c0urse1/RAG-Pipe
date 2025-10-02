@@ -2,17 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bu_superagent.application.ports.document_loader_port import (
-    DocumentLoaderPort,
-    DocumentPayload,
-)
+from bu_superagent.application.ports.document_loader_port import DocumentLoaderPort, DocumentPayload
 
 
 @dataclass
 class PlainTextLoaderAdapter(DocumentLoaderPort):
     def load(self, path: str) -> DocumentPayload:  # type: ignore[override]
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 text = f.read().strip()
             return DocumentPayload(text=text, title=None, source_path=path)
         except Exception as ex:  # noqa: BLE001

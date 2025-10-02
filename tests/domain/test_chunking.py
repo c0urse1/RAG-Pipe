@@ -1,8 +1,10 @@
-from bu_superagent.domain.services.chunking import chunk_text_semantic, ChunkingParams
+from bu_superagent.domain.services.chunking import ChunkingParams, chunk_text_semantic
 
 
 def test_chunking_respects_target_and_overlap():
-    text = "# Titel\n\nAbsatz eins. Satz zwei! Satz drei?\n\n## Untertitel\nNoch ein Absatz. Und noch einer."
+    text = (
+        "# Titel\n\nAbsatz eins. Satz zwei! Satz drei?\n\n## Untertitel\nNoch ein Absatz. Und noch einer."
+    )
     p = ChunkingParams(
         target_chars=50,
         overlap_chars=10,
@@ -20,14 +22,13 @@ def test_chunking_respects_target_and_overlap():
 
     # Titelinjektion:
     assert "Titel" in chunks[0].text
+
 from bu_superagent.domain.services.chunking import (
-    split_into_sections,
-    split_into_paragraphs,
-    split_into_sentences,
-    pack_sentences_to_chunks,
     merge_tiny_neighbors,
-    chunk_text_semantic,
-    ChunkingParams,
+    pack_sentences_to_chunks,
+    split_into_paragraphs,
+    split_into_sections,
+    split_into_sentences,
 )
 
 

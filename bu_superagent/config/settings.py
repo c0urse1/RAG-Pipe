@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
 import os
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -12,7 +12,9 @@ class AppSettings:
     llm_model: str = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     qdrant_host: str = field(default_factory=lambda: os.getenv("QDRANT_HOST", "localhost"))
     qdrant_port: int = field(default_factory=lambda: int(os.getenv("QDRANT_PORT", "6333")))
-    qdrant_collection: str = field(default_factory=lambda: os.getenv("QDRANT_COLLECTION", "kb_chunks_de_1024d"))
+    qdrant_collection: str = field(
+        default_factory=lambda: os.getenv("QDRANT_COLLECTION", "kb_chunks_de_1024d")
+    )
     qdrant_distance: str = "Cosine"
     embedding_dim: int = 1024
 
@@ -24,5 +26,7 @@ class AppSettings:
     embedding_e5: str = "intfloat/multilingual-e5-large-instruct"
 
     # Vector backend switching
-    vector_backend: str = field(default_factory=lambda: os.getenv("VECTOR_BACKEND", "chroma"))  # "qdrant" | "chroma" | "faiss"
+    vector_backend: str = field(
+        default_factory=lambda: os.getenv("VECTOR_BACKEND", "chroma")
+    )  # "qdrant" | "chroma" | "faiss"
     chroma_dir: str = field(default_factory=lambda: os.getenv("CHROMA_DIR", "var/chroma/e5_1024d"))

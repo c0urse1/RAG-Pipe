@@ -1,10 +1,7 @@
 from dataclasses import dataclass
-from typing import Sequence
+from collections.abc import Sequence
 
-from bu_superagent.application.ports.vector_store_port import (
-    VectorStorePort,
-    RetrievedChunk,
-)
+from bu_superagent.application.ports.vector_store_port import RetrievedChunk, VectorStorePort
 
 
 @dataclass
@@ -32,19 +29,22 @@ class QdrantVectorStoreAdapter(VectorStorePort):
         )
 
     def upsert(
-        self, ids: Sequence[str], vectors: Sequence[Sequence[float]], payloads: Sequence[dict]
+        self,
+        ids: Sequence[str],
+        vectors: Sequence[Sequence[float]],
+        payloads: Sequence[dict[str, object]],
     ) -> None:
         try:
             from qdrant_client.models import PointStruct  # type: ignore
         except Exception as ex:  # pragma: no cover
             raise RuntimeError("qdrant-client models not available; install runtime deps") from ex
-        points = [PointStruct(id=ids[i], vector=vectors[i], payload=payloads[i]) for i in range(len(ids))]
+        points = [
+            PointStruct(id=ids[i], vector=vectors[i], payload=payloads[i]) for i in range(len(ids))
+        ]
         self._cli.upsert(collection_name=self.collection, points=points)
 
     def search(self, query_vector: Sequence[float], top_k: int = 5) -> list[RetrievedChunk]:
-        rs = self._cli.search(
-            collection_name=self.collection, query_vector=query_vector, limit=top_k
-        )
+        rs = self._cli.search(collection_name=self.collection, query_vector=query_vector, limit=top_k)
         return [
             RetrievedChunk(
                 id=str(p.id), text=p.payload.get("text", ""), score=p.score, metadata=p.payload

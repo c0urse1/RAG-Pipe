@@ -1,7 +1,7 @@
 import argparse
 
-from bu_superagent.config.composition import build_ingest_use_case
 from bu_superagent.application.dto.ingest_dto import IngestDocumentRequest
+from bu_superagent.config.composition import build_ingest_use_case
 
 
 def main() -> None:

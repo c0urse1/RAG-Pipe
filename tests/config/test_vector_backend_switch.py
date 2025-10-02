@@ -1,7 +1,5 @@
-import os
-from dataclasses import dataclass
-
 import importlib
+from dataclasses import dataclass
 
 
 def test_builders_with_faiss_backend(monkeypatch):
@@ -26,10 +24,13 @@ def test_builders_with_chroma_backend(monkeypatch):
     class DummyChroma:
         persist_dir: str = ""
         collection: str = ""
+
         def ensure_collection(self, *_args, **_kwargs):
             return None
+
         def upsert(self, *_args, **_kwargs):
             return None
+
         def search(self, *_args, **_kwargs):
             return []
 
@@ -50,10 +51,13 @@ def test_builders_with_qdrant_backend(monkeypatch):
         host: str = "localhost"
         port: int = 6333
         collection: str = "kb"
+
         def ensure_collection(self, *_args, **_kwargs):
             return None
+
         def upsert(self, *_args, **_kwargs):
             return None
+
         def search(self, *_args, **_kwargs):
             return []
 

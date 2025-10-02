@@ -1,5 +1,6 @@
-from typing import Protocol, Optional, Sequence
 from dataclasses import dataclass
+from typing import Protocol
+from collections.abc import Sequence
 
 
 @dataclass(frozen=True)
@@ -12,7 +13,7 @@ class ChatMessage:
 class LLMResponse:
     text: str
     finish_reason: str = "stop"
-    usage_tokens: Optional[int] = None
+    usage_tokens: int | None = None
 
 
 class LLMPort(Protocol):

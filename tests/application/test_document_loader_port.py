@@ -1,9 +1,6 @@
 from dataclasses import dataclass
 
-from bu_superagent.application.ports.document_loader_port import (
-    DocumentLoaderPort,
-    DocumentPayload,
-)
+from bu_superagent.application.ports.document_loader_port import DocumentLoaderPort, DocumentPayload
 
 
 @dataclass

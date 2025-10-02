@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import Sequence
+from collections.abc import Sequence
 
 from sentence_transformers import SentenceTransformer
 
-from bu_superagent.application.ports.embedding_port import EmbeddingPort, EmbeddingKind
+from bu_superagent.application.ports.embedding_port import EmbeddingKind, EmbeddingPort
 
 
 def _prefix_e5_query(text: str) -> str:

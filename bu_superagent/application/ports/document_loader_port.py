@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Protocol
+from typing import Protocol
 
 
 @dataclass(frozen=True)
 class DocumentPayload:
     text: str
-    title: Optional[str] = None
-    source_path: Optional[str] = None
+    title: str | None = None
+    source_path: str | None = None
 
 
 class DocumentLoaderPort(Protocol):

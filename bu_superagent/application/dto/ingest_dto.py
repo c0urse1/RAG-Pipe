@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from bu_superagent.application.ports.embedding_port import EmbeddingKind
 
 
 @dataclass(slots=True, frozen=True)
@@ -21,4 +21,4 @@ class IngestDocumentRequest:
     max_overhang: int = 200
     merge_threshold: int = 500
     inject_section_titles: bool = True
-    embedding_kind: str = "mxbai"  # oder "e5"/"jina"
+    embedding_kind: EmbeddingKind = "mxbai"  # oder "e5"/"jina"

@@ -65,14 +65,16 @@ class IngestDocuments:
         ids = [f"{req.doc_id}::chunk::{i}" for i in range(len(chunks))]
         payloads = []
         for i, c in enumerate(chunks):
-            payloads.append({
-                "doc_id": req.doc_id,
-                "chunk_index": i,
-                "section_title": c.section_title,
-                "text": c.text,  # für Auditing & ggf. Reranker
-                "source_path": payload.source_path,
-                "title": payload.title,
-            })
+            payloads.append(
+                {
+                    "doc_id": req.doc_id,
+                    "chunk_index": i,
+                    "section_title": c.section_title,
+                    "text": c.text,  # für Auditing & ggf. Reranker
+                    "source_path": payload.source_path,
+                    "title": payload.title,
+                }
+            )
 
         self.vector_store.ensure_collection(req.collection, dim=len(vectors[0]))
         self.vector_store.upsert(ids=ids, vectors=vectors, payloads=payloads)

@@ -4,8 +4,8 @@ import tempfile
 import pytest
 
 from bu_superagent.infrastructure.parsing.pdf_text_extractor import (
-    PlainTextLoaderAdapter,
     PDFTextExtractorAdapter,
+    PlainTextLoaderAdapter,
 )
 
 

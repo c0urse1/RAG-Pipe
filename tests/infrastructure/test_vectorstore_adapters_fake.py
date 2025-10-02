@@ -15,7 +15,12 @@ def test_chroma_adapter_with_fake_module(monkeypatch):
             if not self._added:
                 return {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
             ids, metas, docs, _emb = self._added[0]
-            return {"ids": [ids[:1]], "documents": [docs[:1]], "metadatas": [metas[:1]], "distances": [[0.1]]}
+            return {
+                "ids": [ids[:1]],
+                "documents": [docs[:1]],
+                "metadatas": [metas[:1]],
+                "distances": [[0.1]],
+            }
 
     class FakeClient:
         def __init__(self, path):
@@ -81,6 +86,7 @@ def test_qdrant_adapter_with_fake_module(monkeypatch):
                 self.payload = payload
 
     import types
+
     fake_qdrant = types.ModuleType("qdrant_client")
     fake_qdrant.QdrantClient = FakeClient
     fake_models = types.ModuleType("qdrant_client.models")
@@ -129,9 +135,7 @@ def test_faiss_adapter_with_fake_modules(monkeypatch):
     monkeypatch.setitem(sys.modules, "numpy", FakeNP())
     monkeypatch.setitem(sys.modules, "faiss", FakeFaiss())
 
-    from bu_superagent.infrastructure.vectorstore.faiss_vector_store import (
-        FaissVectorStoreAdapter,
-    )
+    from bu_superagent.infrastructure.vectorstore.faiss_vector_store import FaissVectorStoreAdapter
 
     vs = FaissVectorStoreAdapter(collection="c")
     vs.ensure_collection("c", dim=3)

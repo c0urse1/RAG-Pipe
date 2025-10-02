@@ -1,7 +1,4 @@
-from bu_superagent.config.composition import (
-    build_embedding_adapter,
-    build_llm_adapter,
-)
+from bu_superagent.config.composition import build_embedding_adapter, build_llm_adapter
 from bu_superagent.config.settings import AppSettings
 
 

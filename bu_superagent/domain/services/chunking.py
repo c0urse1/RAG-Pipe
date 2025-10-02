@@ -2,21 +2,21 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence
+from collections.abc import Sequence
 
 # ---------- Value Objects ----------
 
 
 @dataclass(frozen=True)
 class Section:
-    title: Optional[str]
+    title: str | None
     text: str
 
 
 @dataclass(frozen=True)
 class Chunk:
     text: str
-    section_title: Optional[str]
+    section_title: str | None
     char_len: int
 
 
@@ -26,13 +26,16 @@ _HEADING_PATTERNS = [
     re.compile(r"^\s*#{1,6}\s+(.+)$"),  # Markdown #, ##, ...
     # 1. / 1.1. / 1.1.1 (optional abschließender Punkt nach Zahlensequenz)
     re.compile(r"^\s*(\d+(?:\.\d+){0,3}\.?)\s+(.+)$"),
-    re.compile(r"^([A-ZÄÖÜ][A-ZÄÖÜ0-9 \-/]{3,})\s*$"),  # LAUTSCHRIFT/SEKTIONEN (heurist.)
+    # LAUTSCHRIFT/SEKTIONEN (heurist.)
+    re.compile(r"^([A-ZÄÖÜ][A-ZÄÖÜ0-9 \-/]{3,})\s*$"),
 ]
 
-_SENT_END = re.compile(r"(?<=[.!?])\s+(?=[A-ZÄÖÜ0-9])")  # naive, aber robust genug ohne externe Libs
+_SENT_END = re.compile(
+    r"(?<=[.!?])\s+(?=[A-ZÄÖÜ0-9])"
+)  # naive, aber robust genug ohne externe Libs
 
 
-def _is_heading(line: str) -> Optional[str]:
+def _is_heading(line: str) -> str | None:
     for pat in _HEADING_PATTERNS:
         m = pat.match(line.strip())
         if m:
@@ -43,11 +46,11 @@ def _is_heading(line: str) -> Optional[str]:
     return None
 
 
-def split_into_sections(text: str) -> List[Section]:
+def split_into_sections(text: str) -> list[Section]:
     """Trenne Text in Sektionen anhand typischer Überschriften-Muster."""
-    sections: List[Section] = []
-    curr_title: Optional[str] = None
-    buf: List[str] = []
+    sections: list[Section] = []
+    curr_title: str | None = None
+    buf: list[str] = []
 
     lines = text.splitlines()
     for line in lines:
@@ -66,13 +69,13 @@ def split_into_sections(text: str) -> List[Section]:
     return sections
 
 
-def split_into_paragraphs(text: str) -> List[str]:
+def split_into_paragraphs(text: str) -> list[str]:
     """Absatz-Chunking: leere Zeilen trennen Absätze."""
     paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     return paras if paras else ([text.strip()] if text.strip() else [])
 
 
-def split_into_sentences(paragraph: str) -> List[str]:
+def split_into_sentences(paragraph: str) -> list[str]:
     """Sehr einfacher Satz-Split (ohne externe NLP-Libs)."""
     paragraph = " ".join(paragraph.split())  # normalisieren
     if not paragraph:
@@ -94,7 +97,7 @@ class ChunkingParams:
     inject_section_titles: bool = True
 
 
-def _inject_section_title(text: str, section: Optional[str]) -> str:
+def _inject_section_title(text: str, section: str | None) -> str:
     if not section:
         return text
     # Titel nur injizieren, wenn noch nicht vorhanden:
@@ -106,11 +109,11 @@ def _inject_section_title(text: str, section: Optional[str]) -> str:
 
 def pack_sentences_to_chunks(
     sentences: Sequence[str],
-    section_title: Optional[str],
+    section_title: str | None,
     p: ChunkingParams,
-) -> List[Chunk]:
-    chunks: List[Chunk] = []
-    curr: List[str] = []
+) -> list[Chunk]:
+    chunks: list[Chunk] = []
+    curr: list[str] = []
     curr_len = 0
 
     for s in sentences:
@@ -130,18 +133,21 @@ def pack_sentences_to_chunks(
             chunk_text = " ".join(curr)
             if p.inject_section_titles:
                 chunk_text = _inject_section_title(chunk_text, section_title)
-            chunks.append(Chunk(text=chunk_text, section_title=section_title, char_len=len(chunk_text)))
+            chunks.append(
+                Chunk(text=chunk_text, section_title=section_title, char_len=len(chunk_text))
+            )
 
             # Overlap: die letzten overlap_chars Zeichen als Start des nächsten Chunks
             if p.overlap_chars > 0:
-                tail = chunk_text[-p.overlap_chars:]
+                tail = chunk_text[-p.overlap_chars :]
                 curr = [tail]
                 curr_len = len(tail)
             else:
                 curr = []
                 curr_len = 0
 
-        # Jetzt aktuellen Satz hinzufügen (kann größer als target sein → alleiniger Chunk beim nächsten Lauf)
+    # Jetzt aktuellen Satz hinzufügen (kann größer als target sein →
+    # alleiniger Chunk beim nächsten Lauf)
         if s:
             if curr_len + len(s) + (1 if curr else 0) <= (p.target_chars + p.max_overhang):
                 if curr:
@@ -161,17 +167,19 @@ def pack_sentences_to_chunks(
     return chunks
 
 
-def merge_tiny_neighbors(chunks: List[Chunk], p: ChunkingParams) -> List[Chunk]:
+def merge_tiny_neighbors(chunks: list[Chunk], p: ChunkingParams) -> list[Chunk]:
     """Fasse benachbarte Minichunks derselben Sektion zusammen (z. B. Titel + erster Absatz)."""
     if not chunks:
         return []
-    merged: List[Chunk] = []
+    merged: list[Chunk] = []
     buf = chunks[0]
     for nxt in chunks[1:]:
         if buf.char_len < p.merge_threshold and nxt.section_title == buf.section_title:
             # zusammenführen
             combined_text = (buf.text + "\n\n" + nxt.text).strip()
-            buf = Chunk(text=combined_text, section_title=buf.section_title, char_len=len(combined_text))
+            buf = Chunk(
+                text=combined_text, section_title=buf.section_title, char_len=len(combined_text)
+            )
         else:
             merged.append(buf)
             buf = nxt
@@ -179,17 +187,17 @@ def merge_tiny_neighbors(chunks: List[Chunk], p: ChunkingParams) -> List[Chunk]:
     return merged
 
 
-def chunk_text_semantic(text: str, params: Optional[ChunkingParams] = None) -> List[Chunk]:
+def chunk_text_semantic(text: str, params: ChunkingParams | None = None) -> list[Chunk]:
     """Pipeline: Sektion → Absatz → Satz → Packen → Merge tiny.
 
     Behalte zusätzlich einen Überlappungs‑Tail über Sektionsgrenzen hinweg.
     """
     p = params or ChunkingParams()
-    result: List[Chunk] = []
-    prev_tail: Optional[str] = None
+    result: list[Chunk] = []
+    prev_tail: str | None = None
     for sec in split_into_sections(text):
         paragraphs = split_into_paragraphs(sec.text)
-        sentences: List[str] = []
+        sentences: list[str] = []
         for para in paragraphs:
             sentences.extend(split_into_sentences(para))
         sec_chunks = pack_sentences_to_chunks(sentences, sec.title, p)
@@ -201,19 +209,21 @@ def chunk_text_semantic(text: str, params: Optional[ChunkingParams] = None) -> L
             if p.inject_section_titles and sec.title:
                 prefix = f"{sec.title}\n\n"
                 if new_text.startswith(prefix):
-                    new_text = prefix + prev_tail + " " + new_text[len(prefix):]
+                    new_text = prefix + prev_tail + " " + new_text[len(prefix) :]
                 else:
                     new_text = prev_tail + " " + new_text
             else:
                 new_text = prev_tail + " " + new_text
-            replaced = Chunk(text=new_text, section_title=first.section_title, char_len=len(new_text))
+            replaced = Chunk(
+                text=new_text, section_title=first.section_title, char_len=len(new_text)
+            )
             sec_chunks = [replaced] + sec_chunks[1:]
 
         result.extend(merge_tiny_neighbors(sec_chunks, p))
 
         # Tail für nächste Sektion aktualisieren
         if result and p.overlap_chars > 0:
-            prev_tail = result[-1].text[-p.overlap_chars:]
+            prev_tail = result[-1].text[-p.overlap_chars :]
         else:
             prev_tail = None
     return result

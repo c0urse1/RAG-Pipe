@@ -1,5 +1,6 @@
-from typing import Protocol, Sequence
 from dataclasses import dataclass
+from typing import Protocol
+from collections.abc import Sequence
 
 
 @dataclass(frozen=True)
@@ -9,4 +10,6 @@ class LabelScore:
 
 
 class ClassifierPort(Protocol):
-    def classify(self, texts: Sequence[str], candidate_labels: Sequence[str]) -> list[list[LabelScore]]: ...
+    def classify(
+        self, texts: Sequence[str], candidate_labels: Sequence[str]
+    ) -> list[list[LabelScore]]: ...
