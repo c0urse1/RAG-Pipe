@@ -1,4 +1,12 @@
-from bu_superagent.domain.services.chunking import ChunkingParams, chunk_text_semantic
+from bu_superagent.domain.services.chunking import (
+    ChunkingParams,
+    chunk_text_semantic,
+    merge_tiny_neighbors,
+    pack_sentences_to_chunks,
+    split_into_paragraphs,
+    split_into_sections,
+    split_into_sentences,
+)
 
 
 def test_chunking_respects_target_and_overlap():
@@ -24,14 +32,7 @@ def test_chunking_respects_target_and_overlap():
     # Titelinjektion:
     assert "Titel" in chunks[0].text
 
-
-from bu_superagent.domain.services.chunking import (
-    merge_tiny_neighbors,
-    pack_sentences_to_chunks,
-    split_into_paragraphs,
-    split_into_sections,
-    split_into_sentences,
-)
+ 
 
 
 def test_section_detection_markdown_and_numbered():

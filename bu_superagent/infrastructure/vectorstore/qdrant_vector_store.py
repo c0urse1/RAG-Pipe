@@ -45,9 +45,7 @@ class QdrantVectorStoreAdapter(VectorStorePort):
 
     def search(self, query_vector: Sequence[float], top_k: int = 5) -> list[RetrievedChunk]:
         rs = self._cli.search(
-                collection_name=self.collection,
-                query_vector=query_vector,
-                limit=top_k
+            collection_name=self.collection, query_vector=query_vector, limit=top_k
         )
         return [
             RetrievedChunk(

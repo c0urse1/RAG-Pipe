@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from bu_superagent.application.ports.llm_port import ChatMessage, LLMPort, LLMResponse
 
 if TYPE_CHECKING:  # pragma: no cover
-    from openai import OpenAI
+    pass
 
 
 @dataclass
@@ -15,14 +15,16 @@ class VLLMOpenAIAdapter(LLMPort):
     model: str = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
     def __post_init__(self) -> None:
-        # Lazy import to avoid hard dependency in tests
-        from openai import OpenAI  # type: ignore
-        self._client = OpenAI(base_url=self.base_url, api_key=self.api_key)
+        # Defer import of OpenAI to chat() to avoid hard dependency in tests
+        self._client = None  # type: ignore[assignment]
 
     def chat(
         self, messages: Sequence[ChatMessage], temperature: float = 0.2, max_tokens: int = 512
     ) -> LLMResponse:
         try:
+            if self._client is None:
+                from openai import OpenAI  # type: ignore
+                self._client = OpenAI(base_url=self.base_url, api_key=self.api_key)
             resp = self._client.chat.completions.create(
                 model=self.model,
                 messages=[m.__dict__ for m in messages],
