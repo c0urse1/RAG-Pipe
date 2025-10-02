@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, cast
 
 from bu_superagent.application.ports.llm_port import ChatMessage, LLMPort, LLMResponse
 
@@ -16,19 +17,21 @@ class VLLMOpenAIAdapter(LLMPort):
 
     def __post_init__(self) -> None:
         # Defer import of OpenAI to chat() to avoid hard dependency in tests
-        self._client = None  # type: ignore[assignment]
+        self._client: Any | None = None
 
     def chat(
         self, messages: Sequence[ChatMessage], temperature: float = 0.2, max_tokens: int = 512
     ) -> LLMResponse:
         try:
             if self._client is None:
-                from openai import OpenAI  # type: ignore
-
+                module = import_module("openai")
+                OpenAI = module.OpenAI
                 self._client = OpenAI(base_url=self.base_url, api_key=self.api_key)
-            resp = self._client.chat.completions.create(
+            assert self._client is not None
+            payload: Any = [m.__dict__ for m in messages]
+            resp: Any = self._client.chat.completions.create(
                 model=self.model,
-                messages=[m.__dict__ for m in messages],
+                messages=cast(Any, payload),
                 temperature=temperature,
                 max_tokens=max_tokens,
             )

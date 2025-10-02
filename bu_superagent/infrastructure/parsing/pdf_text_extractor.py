@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib import import_module
 
 from bu_superagent.application.ports.document_loader_port import DocumentLoaderPort, DocumentPayload
 
 
 @dataclass
 class PlainTextLoaderAdapter(DocumentLoaderPort):
-    def load(self, path: str) -> DocumentPayload:  # type: ignore[override]
+    def load(self, path: str) -> DocumentPayload:
         try:
             with open(path, encoding="utf-8") as f:
                 text = f.read().strip()
@@ -18,9 +19,10 @@ class PlainTextLoaderAdapter(DocumentLoaderPort):
 
 @dataclass
 class PDFTextExtractorAdapter(DocumentLoaderPort):
-    def load(self, path: str) -> DocumentPayload:  # type: ignore[override]
+    def load(self, path: str) -> DocumentPayload:
         try:
-            from pypdf import PdfReader  # lazy import to avoid hard dependency in tests
+            module = import_module("pypdf")
+            PdfReader = module.PdfReader
         except Exception as ex:  # pragma: no cover
             raise RuntimeError("pypdf is not installed") from ex
 

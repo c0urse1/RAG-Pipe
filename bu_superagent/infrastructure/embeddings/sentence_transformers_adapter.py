@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 from bu_superagent.application.ports.embedding_port import EmbeddingKind, EmbeddingPort
@@ -32,7 +33,8 @@ class SentenceTransformersEmbeddingAdapter(EmbeddingPort):
     def _get(self, name: str) -> Any:
         if name not in self._cache:
             try:
-                from sentence_transformers import SentenceTransformer  # type: ignore
+                module = import_module("sentence_transformers")
+                SentenceTransformer = module.SentenceTransformer
             except Exception as ex:  # pragma: no cover
                 raise RuntimeError("sentence-transformers not installed") from ex
             self._cache[name] = SentenceTransformer(name, device=self.device)
@@ -63,10 +65,13 @@ class SentenceTransformersEmbeddingAdapter(EmbeddingPort):
         if kind == "e5":
             model = self._get(self.model_e5)
             q = _prefix_e5_query(text)
-            return model.encode(q, normalize_embeddings=True).tolist()
+            vec = model.encode(q, normalize_embeddings=True)
+            return list(vec.tolist())
         elif kind == "jina":
             model = self._get(self.model_jina)
-            return model.encode(text, normalize_embeddings=True).tolist()
+            vec = model.encode(text, normalize_embeddings=True)
+            return list(vec.tolist())
         else:
             model = self._get(self.model_mxbai)
-            return model.encode(text, normalize_embeddings=True).tolist()
+            vec = model.encode(text, normalize_embeddings=True)
+            return list(vec.tolist())

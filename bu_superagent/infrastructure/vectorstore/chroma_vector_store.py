@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from importlib import import_module
 from typing import Any
 
 from bu_superagent.application.ports.vector_store_port import RetrievedChunk, VectorStorePort
@@ -19,7 +20,7 @@ class ChromaVectorStoreAdapter(VectorStorePort):
         self,
     ) -> None:  # pragma: no cover - lazy import path exercised in tests indirectly
         try:
-            import chromadb  # type: ignore
+            chromadb = import_module("chromadb")
         except Exception as ex:  # pragma: no cover
             raise RuntimeError("chromadb not available; install runtime deps") from ex
         self._chromadb = chromadb
@@ -29,6 +30,7 @@ class ChromaVectorStoreAdapter(VectorStorePort):
     def ensure_collection(self, name: str, dim: int) -> None:
         self.collection = name
         # Embeddings supplied manually; use cosine space to match normalized embeddings
+        assert self._client is not None
         self._coll = self._client.get_or_create_collection(
             name=self.collection, metadata={"hnsw:space": "cosine"}
         )

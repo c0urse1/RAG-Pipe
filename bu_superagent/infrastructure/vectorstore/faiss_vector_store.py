@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from importlib import import_module
+from typing import Any, cast
 
 from bu_superagent.application.ports.vector_store_port import RetrievedChunk, VectorStorePort
 
@@ -17,13 +18,13 @@ class FaissVectorStoreAdapter(VectorStorePort):
 
     def _require_modules(self) -> tuple[Any, Any]:  # pragma: no cover
         try:
-            import faiss  # type: ignore
-            import numpy as np  # type: ignore
+            faiss = import_module("faiss")
+            np = import_module("numpy")
         except Exception as ex:  # pragma: no cover
             raise RuntimeError(
                 "faiss-cpu and numpy are required for FaissVectorStoreAdapter"
             ) from ex
-        return np, faiss
+        return cast(Any, np), cast(Any, faiss)
 
     def ensure_collection(self, name: str, dim: int) -> None:
         self.collection = name
@@ -41,7 +42,7 @@ class FaissVectorStoreAdapter(VectorStorePort):
         arr = np.array(vectors, dtype=np.float32)
         n = arr.shape[0]
         base = self.next_idx
-        self.index.add(arr)  # type: ignore[attr-defined]
+        self.index.add(arr)
         for i in range(n):
             self.id_map[base + i] = ids[i]
             self.payloads[base + i] = payloads[i]
@@ -51,7 +52,7 @@ class FaissVectorStoreAdapter(VectorStorePort):
         assert self.index is not None, "Collection not initialized. Call ensure_collection first."
         np, _faiss = self._require_modules()
         q = np.array([query_vector], dtype=np.float32)
-        scores, idxs = self.index.search(q, top_k)  # type: ignore[attr-defined]
+        scores, idxs = self.index.search(q, top_k)
         out: list[RetrievedChunk] = []
         for score, idx in zip(scores[0], idxs[0], strict=False):
             if int(idx) == -1:

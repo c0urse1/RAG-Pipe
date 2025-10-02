@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from ...domain.services.chunking import ChunkingParams, chunk_text_semantic
@@ -21,16 +21,9 @@ class IngestDocumentsUseCase:
         self.vector_store = vector_store
 
     def execute(self, docs: Sequence[IngestDocumentDTO]) -> None:
-        chunks: list[str] = []
-        metas: list[Mapping[str, object]] = []
-        for d in docs:
-            parts = simple_split(d.content)
-            for idx, part in enumerate(parts):
-                chunks.append(part)
-                metas.append({"doc_id": d.id, "title": d.title, "chunk_index": idx})
-
-        # Placeholder stage: store raw chunks and metadata; embeddings used only at query time
-        self.vector_store.add(chunks, metas)
+        raise NotImplementedError(
+            "Legacy IngestDocumentsUseCase is deprecated. Use IngestDocuments instead."
+        )
 
 
 @dataclass
