@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 # ---------- Value Objects ----------
 
@@ -146,8 +146,8 @@ def pack_sentences_to_chunks(
                 curr = []
                 curr_len = 0
 
-    # Jetzt aktuellen Satz hinzufügen (kann größer als target sein →
-    # alleiniger Chunk beim nächsten Lauf)
+        # Jetzt aktuellen Satz hinzufügen (kann größer als target sein →
+        # alleiniger Chunk beim nächsten Lauf)
         if s:
             if curr_len + len(s) + (1 if curr else 0) <= (p.target_chars + p.max_overhang):
                 if curr:

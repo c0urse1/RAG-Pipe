@@ -24,6 +24,7 @@ def test_chunking_respects_target_and_overlap():
     # Titelinjektion:
     assert "Titel" in chunks[0].text
 
+
 from bu_superagent.domain.services.chunking import (
     merge_tiny_neighbors,
     pack_sentences_to_chunks,

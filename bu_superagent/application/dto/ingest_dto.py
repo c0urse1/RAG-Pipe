@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from bu_superagent.application.ports.embedding_port import EmbeddingKind
 
 

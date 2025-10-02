@@ -3,26 +3,18 @@
 # Wichtig: keine Geschäftslogik, nur Wiring.
 """
 
+from bu_superagent.application.ports.vector_store_port import VectorStorePort
 from bu_superagent.application.use_cases.ingest_documents import IngestDocuments
 from bu_superagent.application.use_cases.query_knowledge_base import QueryKnowledgeBase
 from bu_superagent.config.settings import AppSettings
-from bu_superagent.application.ports.vector_store_port import VectorStorePort
 from bu_superagent.infrastructure.embeddings.sentence_transformers_adapter import (
     SentenceTransformersEmbeddingAdapter,
 )
 from bu_superagent.infrastructure.llm.vllm_openai_adapter import VLLMOpenAIAdapter
-from bu_superagent.infrastructure.parsing.pdf_text_extractor import (
-    PDFTextExtractorAdapter,
-)
-from bu_superagent.infrastructure.vectorstore.chroma_vector_store import (
-    ChromaVectorStoreAdapter,
-)
-from bu_superagent.infrastructure.vectorstore.faiss_vector_store import (
-    FaissVectorStoreAdapter,
-)
-from bu_superagent.infrastructure.vectorstore.qdrant_vector_store import (
-    QdrantVectorStoreAdapter,
-)
+from bu_superagent.infrastructure.parsing.pdf_text_extractor import PDFTextExtractorAdapter
+from bu_superagent.infrastructure.vectorstore.chroma_vector_store import ChromaVectorStoreAdapter
+from bu_superagent.infrastructure.vectorstore.faiss_vector_store import FaissVectorStoreAdapter
+from bu_superagent.infrastructure.vectorstore.qdrant_vector_store import QdrantVectorStoreAdapter
 
 
 def _build_vector_store(s: AppSettings) -> VectorStorePort:

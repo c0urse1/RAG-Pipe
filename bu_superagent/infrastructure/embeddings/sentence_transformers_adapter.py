@@ -1,11 +1,11 @@
-from dataclasses import dataclass
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from bu_superagent.application.ports.embedding_port import EmbeddingKind, EmbeddingPort
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from sentence_transformers import SentenceTransformer
+    pass
 
 
 def _prefix_e5_query(text: str) -> str:

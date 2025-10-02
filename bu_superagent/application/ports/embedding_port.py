@@ -1,5 +1,5 @@
-from typing import Literal, Protocol
 from collections.abc import Sequence
+from typing import Literal, Protocol
 
 EmbeddingKind = Literal["e5", "mxbai", "jina"]
 

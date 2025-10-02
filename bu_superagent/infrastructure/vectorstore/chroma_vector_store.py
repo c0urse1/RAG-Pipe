@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from bu_superagent.application.ports.vector_store_port import RetrievedChunk, VectorStorePort

@@ -1,6 +1,6 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
-from collections.abc import Sequence
 
 
 @dataclass(frozen=True)

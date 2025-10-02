@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from bu_superagent.application.ports.vector_store_port import RetrievedChunk, VectorStorePort
 
@@ -44,7 +44,11 @@ class QdrantVectorStoreAdapter(VectorStorePort):
         self._cli.upsert(collection_name=self.collection, points=points)
 
     def search(self, query_vector: Sequence[float], top_k: int = 5) -> list[RetrievedChunk]:
-        rs = self._cli.search(collection_name=self.collection, query_vector=query_vector, limit=top_k)
+        rs = self._cli.search(
+                collection_name=self.collection,
+                query_vector=query_vector,
+                limit=top_k
+        )
         return [
             RetrievedChunk(
                 id=str(p.id), text=p.payload.get("text", ""), score=p.score, metadata=p.payload
