@@ -1,4 +1,5 @@
 import pytest
+
 from bu_superagent.domain.services.relevance_scoring import cosine_similarity
 
 

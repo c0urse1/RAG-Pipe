@@ -1,4 +1,5 @@
 import pytest
+
 from bu_superagent.application.dto.query_dto import QueryRequest
 from bu_superagent.application.use_cases.query_knowledge_base import QueryKnowledgeBase
 
