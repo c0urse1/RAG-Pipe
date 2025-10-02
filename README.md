@@ -1,19 +1,24 @@
-# BU Superagent – Architekturgrundlagen
+BU Superagent – Architecture Basics
 
-Ziel: Striktes Clean-Architecture-Gerüst (Domain → Application → Infrastructure → Interface → Config)
-für eine RAG-Engine (deutsche Sprache), ohne „Vibecoding“. Domain bleibt IO-frei und deterministisch.
+Goal: Strict Clean Architecture skeleton (Domain → Application → Infrastructure → Interface → Config)
+for a RAG engine (German language), without “vibecoding”. Domain stays IO-free and deterministic.
 
-## Schichten
+Layers
 
-- domain/: Entitäten, Value Objects, Policies, pure Services. Kein I/O, keine Globals, keine externen Libs.
-- application/: Use-Cases + Ports (Interfaces). Orchestriert Domain. Kein direkter Infra-Zugriff.
-- infrastructure/: Adapter, die Ports implementieren. Wrappt externe Libs/IO.
-- interface/: CLI/HTTP – nur Parsing/Formatting + Delegation an Use-Cases.
-- config/: Composition Root & Settings – einziger Ort für Env/DI/Wiring.
+domain/: Entities, Value Objects, Policies, pure Services. No I/O, no globals, no external libs.
 
-## Regeln (Kurz)
+application/: Use Cases + Ports (Interfaces). Orchestrates domain. No direct Infra access.
 
-- Abhängigkeiten nur nach innen (siehe `.importlinter`).
-- Fehler: typisiert (DomainErrors/Result), keine stillen Fails.
-- Tests: Domain & Use-Cases ohne Infra (Stubs/Fakes).
+infrastructure/: Adapters implementing Ports. Wraps external libs/IO.
 
+interface/: CLI/HTTP – only parsing/formatting + delegation to Use Cases.
+
+config/: Composition Root & Settings – only place for Env/DI/Wiring.
+
+Rules (Short)
+
+Dependencies only inward (see .importlinter).
+
+Errors: typed (DomainErrors/Result), no silent failures.
+
+Tests: Domain & Use Cases without Infra (Stubs/Fakes).
