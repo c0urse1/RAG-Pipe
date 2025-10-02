@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 from bu_superagent.application.ports.vector_store_port import RetrievedChunk, VectorStorePort
 
 
 @dataclass
 class FaissVectorStoreAdapter(VectorStorePort):
-    index: object | None = field(default=None, init=False)
+    index: Any | None = field(default=None, init=False)
     payloads: dict[int, dict[str, object]] = field(default_factory=dict, init=False)
     id_map: dict[int, str] = field(default_factory=dict, init=False)
     next_idx: int = 0
     collection: str = "kb_chunks_de_1024d"
 
-    def _require_modules(self) -> tuple[object, object]:  # pragma: no cover
+    def _require_modules(self) -> tuple[Any, Any]:  # pragma: no cover
         try:
             import faiss  # type: ignore
             import numpy as np  # type: ignore
@@ -58,6 +59,8 @@ class FaissVectorStoreAdapter(VectorStorePort):
             rid = self.id_map[int(idx)]
             meta = self.payloads[int(idx)]
             out.append(
-                RetrievedChunk(id=rid, text=meta.get("text", ""), score=float(score), metadata=meta)
+                RetrievedChunk(
+                    id=rid, text=str(meta.get("text", "")), score=float(score), metadata=meta
+                )
             )
         return out

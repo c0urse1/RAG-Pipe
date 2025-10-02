@@ -44,12 +44,15 @@ class QdrantVectorStoreAdapter(VectorStorePort):
         self._cli.upsert(collection_name=self.collection, points=points)
 
     def search(self, query_vector: Sequence[float], top_k: int = 5) -> list[RetrievedChunk]:
-        rs = self._cli.search(
+        rs = self._cli.search(  # type: ignore[no-untyped-call]
             collection_name=self.collection, query_vector=query_vector, limit=top_k
         )
         return [
             RetrievedChunk(
-                id=str(p.id), text=p.payload.get("text", ""), score=p.score, metadata=p.payload
+                id=str(p.id),  # type: ignore[attr-defined]
+                text=p.payload.get("text", ""),  # type: ignore[no-any-return]
+                score=p.score,  # type: ignore[no-any-return]
+                metadata=p.payload,  # type: ignore[no-any-return]
             )
             for p in rs
         ]

@@ -32,8 +32,6 @@ def test_chunking_respects_target_and_overlap():
     # Titelinjektion:
     assert "Titel" in chunks[0].text
 
- 
-
 
 def test_section_detection_markdown_and_numbered():
     txt = """# Einleitung

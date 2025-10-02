@@ -24,6 +24,7 @@ class VLLMOpenAIAdapter(LLMPort):
         try:
             if self._client is None:
                 from openai import OpenAI  # type: ignore
+
                 self._client = OpenAI(base_url=self.base_url, api_key=self.api_key)
             resp = self._client.chat.completions.create(
                 model=self.model,
