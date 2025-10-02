@@ -3,7 +3,8 @@ from bu_superagent.domain.services.chunking import ChunkingParams, chunk_text_se
 
 def test_chunking_respects_target_and_overlap():
     text = (
-        "# Titel\n\nAbsatz eins. Satz zwei! Satz drei?\n\n## Untertitel\nNoch ein Absatz. Und noch einer."
+        "# Titel\n\nAbsatz eins. Satz zwei! Satz drei?\n\n## Untertitel\nNoch ein Absatz."
+        " Und noch einer."
     )
     p = ChunkingParams(
         target_chars=50,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from collections.abc import Sequence
+from typing import Any
 
 from bu_superagent.application.ports.vector_store_port import RetrievedChunk, VectorStorePort
 
@@ -10,6 +11,9 @@ from bu_superagent.application.ports.vector_store_port import RetrievedChunk, Ve
 class ChromaVectorStoreAdapter(VectorStorePort):
     persist_dir: str = "var/chroma/e5_1024d"
     collection: str = "kb_chunks_de_1024d"
+    _chromadb: Any | None = None
+    _client: Any | None = None
+    _coll: Any | None = None
 
     def __post_init__(
         self,
@@ -37,7 +41,12 @@ class ChromaVectorStoreAdapter(VectorStorePort):
     ) -> None:
         assert self._coll is not None, "Collection not initialized. Call ensure_collection first."
         docs = [p.get("text", "") for p in payloads]
-        self._coll.add(ids=list(ids), metadatas=list(payloads), documents=docs, embeddings=list(vectors))
+        self._coll.add(
+            ids=list(ids),
+            metadatas=list(payloads),
+            documents=docs,
+            embeddings=list(vectors),
+        )
 
     def search(self, query_vector: Sequence[float], top_k: int = 5) -> list[RetrievedChunk]:
         assert self._coll is not None, "Collection not initialized. Call ensure_collection first."
@@ -51,7 +60,7 @@ class ChromaVectorStoreAdapter(VectorStorePort):
             out.append(
                 RetrievedChunk(
                     id=str(ids[i]),
-                    text=docs[i] or "",
+                    text=str(docs[i] or ""),
                     score=float(dists[i]),
                     metadata=metas[i] or {},
                 )

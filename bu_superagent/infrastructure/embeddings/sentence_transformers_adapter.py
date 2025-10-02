@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from collections.abc import Sequence
-
-from sentence_transformers import SentenceTransformer
+from typing import TYPE_CHECKING, Any
 
 from bu_superagent.application.ports.embedding_port import EmbeddingKind, EmbeddingPort
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from sentence_transformers import SentenceTransformer
 
 
 def _prefix_e5_query(text: str) -> str:
@@ -25,10 +27,14 @@ class SentenceTransformersEmbeddingAdapter(EmbeddingPort):
     device: str = "cpu"  # "cuda" falls verfügbar
 
     def __post_init__(self) -> None:
-        self._cache: dict[str, SentenceTransformer] = {}
+        self._cache: dict[str, Any] = {}
 
-    def _get(self, name: str) -> SentenceTransformer:
+    def _get(self, name: str) -> Any:
         if name not in self._cache:
+            try:
+                from sentence_transformers import SentenceTransformer  # type: ignore
+            except Exception as ex:  # pragma: no cover
+                raise RuntimeError("sentence-transformers not installed") from ex
             self._cache[name] = SentenceTransformer(name, device=self.device)
         return self._cache[name]
 
