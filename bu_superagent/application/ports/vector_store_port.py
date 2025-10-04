@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 # Import domain model and re-export for convenience
 from bu_superagent.domain.models import RetrievedChunk
@@ -7,6 +7,7 @@ from bu_superagent.domain.models import RetrievedChunk
 __all__ = ["RetrievedChunk", "VectorStorePort"]
 
 
+@runtime_checkable
 class VectorStorePort(Protocol):
     def upsert(
         self,

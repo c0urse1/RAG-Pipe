@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,7 @@ class LLMResponse:
     usage_tokens: int | None = None
 
 
+@runtime_checkable
 class LLMPort(Protocol):
     def chat(
         self, messages: Sequence[ChatMessage], temperature: float = 0.2, max_tokens: int = 512
