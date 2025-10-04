@@ -1,14 +1,10 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
 from typing import Protocol
 
+# Import domain model and re-export for convenience
+from bu_superagent.domain.models import RetrievedChunk
 
-@dataclass(frozen=True)
-class RetrievedChunk:
-    id: str
-    text: str
-    score: float
-    metadata: dict[str, object]
+__all__ = ["RetrievedChunk", "VectorStorePort"]
 
 
 class VectorStorePort(Protocol):

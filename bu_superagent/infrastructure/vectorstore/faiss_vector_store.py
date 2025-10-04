@@ -61,7 +61,11 @@ class FaissVectorStoreAdapter(VectorStorePort):
             meta = self.payloads[int(idx)]
             out.append(
                 RetrievedChunk(
-                    id=rid, text=str(meta.get("text", "")), score=float(score), metadata=meta
+                    id=rid,
+                    text=str(meta.get("text", "")),
+                    metadata=meta,
+                    vector=None,  # FAISS doesn't store vectors separately
+                    score=float(score),
                 )
             )
         return out

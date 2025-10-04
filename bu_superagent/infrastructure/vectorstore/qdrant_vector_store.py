@@ -61,8 +61,9 @@ class QdrantVectorStoreAdapter(VectorStorePort):
             RetrievedChunk(
                 id=str(p.id),
                 text=p.payload.get("text", ""),
-                score=p.score,
                 metadata=p.payload,
+                vector=None,  # Qdrant doesn't return vectors by default
+                score=p.score,
             )
             for p in rs
         ]
