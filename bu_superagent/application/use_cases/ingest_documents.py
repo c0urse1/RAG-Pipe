@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -35,6 +36,11 @@ class IngestDocuments:
     def execute(self, req: IngestDocumentRequest) -> int:
         # 1) Quelle laden
         payload = self.loader.load(req.path)
+        if not payload.text.strip():
+            from ...domain.errors import ValidationError
+
+            raise ValidationError(f"Document '{req.path}' is empty.")
+
         text = payload.text
 
         # 2) Chunken (pure Domain)
@@ -57,14 +63,15 @@ class IngestDocuments:
         # 4) Persistenz in VectorStore (mit Metadaten)
         ids = [f"{req.doc_id}::chunk::{i}" for i in range(len(chunks))]
         payloads = []
+        source_basename = os.path.basename(payload.source_path) if payload.source_path else None
         for i, c in enumerate(chunks):
             payloads.append(
                 {
                     "doc_id": req.doc_id,
                     "chunk_index": i,
                     "section_title": c.section_title,
-                    "text": c.text,  # für Auditing & ggf. Reranker
-                    "source_path": payload.source_path,
+                    "text": c.text,
+                    "source_path": source_basename,
                     "title": payload.title,
                 }
             )
