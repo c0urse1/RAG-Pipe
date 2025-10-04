@@ -1,70 +1,109 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from dataclasses import dataclass
-from importlib import import_module
-from typing import Any
+from typing import Any, cast
 
 from bu_superagent.application.ports.vector_store_port import RetrievedChunk, VectorStorePort
+from bu_superagent.domain.errors import VectorStoreError
+
+try:  # pragma: no cover - exercised via tests with monkeypatch
+    import chromadb
+except Exception:  # noqa: BLE001
+    chromadb = None
 
 
 @dataclass
 class ChromaVectorStoreAdapter(VectorStorePort):
     persist_dir: str = "var/chroma/e5_1024d"
     collection: str = "kb_chunks_de_1024d"
-    _chromadb: Any | None = None
+    store_text: bool = True  # regulatorische Option: Text explizit deaktivierbar
     _client: Any | None = None
     _coll: Any | None = None
 
-    def __post_init__(
-        self,
-    ) -> None:  # pragma: no cover - lazy import path exercised in tests indirectly
+    def __post_init__(self) -> None:
+        if chromadb is None:
+            raise VectorStoreError("chromadb not installed.")
+        os.makedirs(self.persist_dir, exist_ok=True)
         try:
-            chromadb = import_module("chromadb")
-        except Exception as ex:  # pragma: no cover
-            raise RuntimeError("chromadb not available; install runtime deps") from ex
-        self._chromadb = chromadb
-        self._client = chromadb.PersistentClient(path=self.persist_dir)
-        self._coll = None
+            self._client = chromadb.PersistentClient(path=self.persist_dir)
+        except Exception as ex:  # noqa: BLE001
+            raise VectorStoreError(f"Failed to init Chroma at '{self.persist_dir}': {ex}") from ex
 
     def ensure_collection(self, name: str, dim: int) -> None:
+        del dim  # Chroma collections are dimensionless; embeddings carry their own size
+        if self._client is None:
+            raise VectorStoreError("Chroma client not initialized.")
         self.collection = name
-        # Embeddings supplied manually; use cosine space to match normalized embeddings
-        assert self._client is not None
-        self._coll = self._client.get_or_create_collection(
-            name=self.collection, metadata={"hnsw:space": "cosine"}
-        )
+        try:
+            self._coll = self._client.get_or_create_collection(
+                name=self.collection,
+                metadata={"hnsw:space": "cosine"},
+            )
+        except Exception as ex:  # noqa: BLE001
+            raise VectorStoreError(f"Failed to ensure collection '{name}': {ex}") from ex
 
     def upsert(
         self,
         ids: Sequence[str],
         vectors: Sequence[Sequence[float]],
-        payloads: Sequence[dict[str, object]],
+        payloads: Sequence[dict[str, Any]],
     ) -> None:
-        assert self._coll is not None, "Collection not initialized. Call ensure_collection first."
-        docs = [p.get("text", "") for p in payloads]
-        self._coll.add(
-            ids=list(ids),
-            metadatas=list(payloads),
-            documents=docs,
-            embeddings=list(vectors),
-        )
+        if self._coll is None:
+            raise VectorStoreError("Collection not initialized. Call ensure_collection first.")
+        try:
+            documents = (
+                [p.get("text", "") for p in payloads] if self.store_text else [""] * len(payloads)
+            )
+            self._coll.add(
+                ids=list(ids),
+                embeddings=[list(vec) for vec in vectors],
+                metadatas=list(payloads),
+                documents=documents,
+            )
+        except Exception as ex:  # noqa: BLE001
+            raise VectorStoreError(f"Upsert failed: {ex}") from ex
 
     def search(self, query_vector: Sequence[float], top_k: int = 5) -> list[RetrievedChunk]:
-        assert self._coll is not None, "Collection not initialized. Call ensure_collection first."
-        res = self._coll.query(query_embeddings=[list(query_vector)], n_results=top_k)
-        out: list[RetrievedChunk] = []
-        ids = res.get("ids", [[]])[0]
-        docs = res.get("documents", [[]])[0]
-        metas = res.get("metadatas", [[]])[0]
-        dists = res.get("distances", [[]])[0]
-        for i in range(len(ids)):
-            out.append(
+        if self._coll is None:
+            raise VectorStoreError("Collection not initialized. Call ensure_collection first.")
+        try:
+            result = cast(
+                dict[str, list[list[Any]]],
+                self._coll.query(
+                    query_embeddings=[list(query_vector)],
+                    n_results=top_k,
+                ),
+            )
+        except Exception as ex:  # noqa: BLE001
+            raise VectorStoreError(f"Search failed: {ex}") from ex
+
+        ids = (result.get("ids") or [[]])[0]
+        documents = (result.get("documents") or [[]])[0]
+        metadatas = (result.get("metadatas") or [[]])[0]
+        distances = (result.get("distances") or [[]])[0]
+
+        chunks: list[RetrievedChunk] = []
+        for idx, chunk_id in enumerate(ids):
+            distance = float(distances[idx]) if idx < len(distances) else 0.0
+            score = 1.0 - distance  # Chroma liefert Distanz (kleiner = besser)
+            text = documents[idx] if idx < len(documents) and documents[idx] is not None else ""
+            metadata = metadatas[idx] if idx < len(metadatas) and metadatas[idx] is not None else {}
+            chunks.append(
                 RetrievedChunk(
-                    id=str(ids[i]),
-                    text=str(docs[i] or ""),
-                    score=float(dists[i]),
-                    metadata=metas[i] or {},
+                    id=str(chunk_id),
+                    text=str(text),
+                    score=score,
+                    metadata=metadata,
                 )
             )
-        return out
+        return chunks
+
+    def persist(self) -> None:
+        if self._client is None:
+            raise VectorStoreError("Chroma client not initialized.")
+        try:
+            self._client.persist()
+        except Exception as ex:  # noqa: BLE001
+            raise VectorStoreError(f"Persist failed: {ex}") from ex
