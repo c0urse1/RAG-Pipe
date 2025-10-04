@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from importlib import import_module
 
 from bu_superagent.application.ports.document_loader_port import DocumentLoaderPort, DocumentPayload
+from bu_superagent.domain.errors import DocumentError
 
 
 @dataclass
@@ -14,7 +15,7 @@ class PlainTextLoaderAdapter(DocumentLoaderPort):
                 text = f.read().strip()
             return DocumentPayload(text=text, title=None, source_path=path)
         except Exception as ex:  # noqa: BLE001
-            raise RuntimeError(f"TXT load failed: {ex}") from ex
+            raise DocumentError(f"TXT load failed: {ex}") from ex
 
 
 @dataclass
@@ -24,7 +25,7 @@ class PDFTextExtractorAdapter(DocumentLoaderPort):
             module = import_module("pypdf")
             PdfReader = module.PdfReader
         except Exception as ex:  # pragma: no cover
-            raise RuntimeError("pypdf is not installed") from ex
+            raise DocumentError("pypdf is not installed") from ex
 
         try:
             reader = PdfReader(path)
@@ -34,6 +35,8 @@ class PDFTextExtractorAdapter(DocumentLoaderPort):
             text = "\n\n".join(pages).strip()
             title = reader.metadata.title if getattr(reader, "metadata", None) else None
             return DocumentPayload(text=text, title=title, source_path=path)
+        except DocumentError:
+            raise  # Re-raise domain errors
         except Exception as ex:  # noqa: BLE001
             # Optional: Fallback über 'unstructured' o. OCR – hier bewusst weggelassen
-            raise RuntimeError(f"PDF parse failed: {ex}") from ex
+            raise DocumentError(f"PDF parse failed: {ex}") from ex

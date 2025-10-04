@@ -92,8 +92,9 @@ class ChromaVectorStoreAdapter(VectorStorePort):
                 RetrievedChunk(
                     id=str(chunk_id),
                     text=str(text),
-                    score=score,
                     metadata=metadata,
+                    vector=None,  # Chroma doesn't return vectors by default
+                    score=score,
                 )
             )
         return chunks

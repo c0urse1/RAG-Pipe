@@ -4,6 +4,7 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 from bu_superagent.application.ports.embedding_port import EmbeddingKind, EmbeddingPort
+from bu_superagent.domain.errors import EmbeddingError
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     pass
@@ -36,42 +37,56 @@ class SentenceTransformersEmbeddingAdapter(EmbeddingPort):
                 module = import_module("sentence_transformers")
                 SentenceTransformer = module.SentenceTransformer
             except Exception as ex:  # pragma: no cover
-                raise RuntimeError("sentence-transformers not installed") from ex
+                raise EmbeddingError("sentence-transformers not installed") from ex
             self._cache[name] = SentenceTransformer(name, device=self.device)
         return self._cache[name]
 
     def embed_texts(self, texts: Sequence[str], kind: EmbeddingKind = "mxbai") -> list[list[float]]:
-        if kind == "e5":
-            model = self._get(self.model_e5)
-            inputs = [_prefix_e5_passage(t) for t in texts]
-            return [
-                v.tolist()
-                for v in model.encode(inputs, normalize_embeddings=True, convert_to_numpy=True)
-            ]
-        elif kind == "jina":
-            model = self._get(self.model_jina)
-            return [
-                v.tolist()
-                for v in model.encode(list(texts), normalize_embeddings=True, convert_to_numpy=True)
-            ]
-        else:  # "mxbai"
-            model = self._get(self.model_mxbai)
-            return [
-                v.tolist()
-                for v in model.encode(list(texts), normalize_embeddings=True, convert_to_numpy=True)
-            ]
+        try:
+            if kind == "e5":
+                model = self._get(self.model_e5)
+                inputs = [_prefix_e5_passage(t) for t in texts]
+                return [
+                    v.tolist()
+                    for v in model.encode(inputs, normalize_embeddings=True, convert_to_numpy=True)
+                ]
+            elif kind == "jina":
+                model = self._get(self.model_jina)
+                return [
+                    v.tolist()
+                    for v in model.encode(
+                        list(texts), normalize_embeddings=True, convert_to_numpy=True
+                    )
+                ]
+            else:  # "mxbai"
+                model = self._get(self.model_mxbai)
+                return [
+                    v.tolist()
+                    for v in model.encode(
+                        list(texts), normalize_embeddings=True, convert_to_numpy=True
+                    )
+                ]
+        except EmbeddingError:
+            raise  # Re-raise domain errors
+        except Exception as ex:  # noqa: BLE001
+            raise EmbeddingError(f"Failed to embed texts: {ex}") from ex
 
     def embed_query(self, text: str, kind: EmbeddingKind = "mxbai") -> list[float]:
-        if kind == "e5":
-            model = self._get(self.model_e5)
-            q = _prefix_e5_query(text)
-            vec = model.encode(q, normalize_embeddings=True)
-            return list(vec.tolist())
-        elif kind == "jina":
-            model = self._get(self.model_jina)
-            vec = model.encode(text, normalize_embeddings=True)
-            return list(vec.tolist())
-        else:
-            model = self._get(self.model_mxbai)
-            vec = model.encode(text, normalize_embeddings=True)
-            return list(vec.tolist())
+        try:
+            if kind == "e5":
+                model = self._get(self.model_e5)
+                q = _prefix_e5_query(text)
+                vec = model.encode(q, normalize_embeddings=True)
+                return list(vec.tolist())
+            elif kind == "jina":
+                model = self._get(self.model_jina)
+                vec = model.encode(text, normalize_embeddings=True)
+                return list(vec.tolist())
+            else:
+                model = self._get(self.model_mxbai)
+                vec = model.encode(text, normalize_embeddings=True)
+                return list(vec.tolist())
+        except EmbeddingError:
+            raise  # Re-raise domain errors
+        except Exception as ex:  # noqa: BLE001
+            raise EmbeddingError(f"Failed to embed query: {ex}") from ex

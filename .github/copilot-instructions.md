@@ -28,8 +28,8 @@
 - Tests: `.venv\Scripts\python.exe -m pytest -q`. Active suites cover domain chunking (`tests/domain/test_chunking.py`), ingestion flow (`tests/application/test_ingest_use_case_v2.py`), CLI placeholders, and infra adapter fakes. Leave NotImplemented sentinels in place where asserted.
 
 ### Guardrails & examples
+- **Do not remove/rename files** without checking Port relations. If a file is an unused duplicate adapter, remove it. Utilities belong under `infrastructure/<tech>/utils.py` and are only imported by adapters.
 - Never import infrastructure from domain/application; respect inward-only dependencies enforced by importlinter.
-- Utilities live under `infrastructure/<tech>/` (e.g., add helper to `.../utils.py`) and are only imported by adapters.
 - Follow the chunking patterns and tests in `tests/domain/test_chunking.py` when modifying `chunk_text_semantic`; stay deterministic and keep overlap/tail semantics.
 - For new adapters, copy the lazy-import/error-wrapping style and add contract tests under `tests/infrastructure/` similar to existing fakes.
 - When extending interface/CLI, keep it thin: parse args, call composition builders, and hand off to use cases.

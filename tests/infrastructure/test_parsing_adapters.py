@@ -3,6 +3,7 @@ import tempfile
 
 import pytest
 
+from bu_superagent.domain.errors import DocumentError
 from bu_superagent.infrastructure.parsing.pdf_text_extractor import (
     PDFTextExtractorAdapter,
     PlainTextLoaderAdapter,
@@ -22,12 +23,12 @@ def test_plain_text_loader_reads_file():
 
 def test_pdf_loader_errors_for_missing_dependency_or_file():
     adapter = PDFTextExtractorAdapter()
-    # When pypdf missing or file invalid, should raise RuntimeError (no external side effects)
-    with pytest.raises(RuntimeError):
+    # When pypdf missing or file invalid, should raise DocumentError (domain-specific error)
+    with pytest.raises(DocumentError):
         adapter.load("/non/existent.pdf")
 
 
-def test_plain_text_loader_missing_file_raises_runtimeerror():
+def test_plain_text_loader_missing_file_raises_documenterror():
     loader = PlainTextLoaderAdapter()
-    with pytest.raises(RuntimeError):
+    with pytest.raises(DocumentError):
         loader.load("/no/such/file.txt")

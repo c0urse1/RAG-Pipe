@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+
+
 class DomainError(Exception):
     """Base class for domain-specific errors."""
 
@@ -12,3 +15,24 @@ class EmbeddingError(DomainError):
 
 class VectorStoreError(DomainError):
     """Vector store backend failed or is misconfigured."""
+
+
+class LLMError(DomainError):
+    """LLM backend failed or is misconfigured."""
+
+
+class DocumentError(DomainError):
+    """Document loading/parsing failed."""
+
+
+@dataclass(frozen=True)
+class LowConfidenceError(DomainError):
+    """Retrieval confidence below acceptable threshold."""
+
+    message: str
+    top_score: float
+    threshold: float
+
+
+class RetrievalError(DomainError):
+    """Generic retrieval failure (after infra errors were mapped)."""

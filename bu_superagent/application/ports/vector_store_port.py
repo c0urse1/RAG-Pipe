@@ -1,16 +1,13 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, runtime_checkable
+
+# Import domain model and re-export for convenience
+from bu_superagent.domain.models import RetrievedChunk
+
+__all__ = ["RetrievedChunk", "VectorStorePort"]
 
 
-@dataclass(frozen=True)
-class RetrievedChunk:
-    id: str
-    text: str
-    score: float
-    metadata: dict[str, object]
-
-
+@runtime_checkable
 class VectorStorePort(Protocol):
     def upsert(
         self,

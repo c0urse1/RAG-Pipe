@@ -4,6 +4,7 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, cast
 
 from bu_superagent.application.ports.llm_port import ChatMessage, LLMPort, LLMResponse
+from bu_superagent.domain.errors import LLMError
 
 if TYPE_CHECKING:  # pragma: no cover
     pass
@@ -41,7 +42,5 @@ class VLLMOpenAIAdapter(LLMPort):
                 finish_reason=choice.finish_reason,
             )
         except Exception as ex:  # noqa: BLE001
-            # Übersetze externe Fehler in domänenspezifische – hier kurz gehalten:
-            raise RuntimeError(
-                f"LLM communication failed: {ex}"
-            ) from ex  # später: typisierte Errors
+            # Translate external errors to domain-specific errors
+            raise LLMError(f"LLM communication failed: {ex}") from ex
