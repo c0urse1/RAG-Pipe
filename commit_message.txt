@@ -1,0 +1,85 @@
+feat(application): Implement QueryKnowledgeBase use case with confidence-gated RAG
+
+Implement complete RAG (Retrieval-Augmented Generation) pipeline in
+QueryKnowledgeBase.execute() with Result type pattern for explicit error handling.
+The orchestration integrates domain ranking services, confidence gating, and
+optional LLM generation.
+
+CHANGES:
+
+Application Layer:
+- bu_superagent/application/dto/query_dto.py
+  * Enhanced QueryRequest: added mmr (bool), mmr_lambda (float=0.5),
+    and confidence_threshold (float=0.35) for query-time tuning
+  * Created RAGAnswer: text (str) and citations (list[Citation])
+  * Imports Citation from domain.models for proper layering
+
+- bu_superagent/application/ports/llm_port.py
+  * Added generate(prompt) convenience method with default implementation
+    using chat() to simplify single-turn prompting
+  * LLMResponse and ChatMessage remain unchanged
+
+- bu_superagent/application/use_cases/query_knowledge_base.py
+  * NEW: Generic Result[T, E] type for explicit success/failure
+  * NEW: QueryKnowledgeBase class with EmbeddingPort, VectorStorePort,
+    and optional LLMPort dependencies
+  * NEW: _build_prompt() helper for constructing RAG prompts with context
+  * IMPLEMENTED: execute() orchestrates 7-stage pipeline:
+    1) Validate QueryRequest (non-empty question, top_k > 0)
+    2) Embed query via EmbeddingPort
+    3) Retrieve candidates via VectorStorePort (oversample for MMR)
+    4) Apply domain post-processing: deduplicate_by_cosine + optional MMR
+    5) Confidence gate: passes_confidence() with threshold
+    6) Generate answer with LLMPort or extractive fallback
+    7) Extract citations from final retrieval set
+  * Returns Result[RAGAnswer, Exception] with explicit error types:
+    ValidationError, RetrievalError, LowConfidenceError, or generic exceptions
+  * Extractive fallback: concatenate chunk texts when LLM is None
+
+Tests:
+- tests/application/test_llm_port.py (NEW)
+  * 5 tests: interface compliance, generate() delegation to chat(),
+    default implementation, ChatMessage construction, LLMResponse validation
+
+- tests/application/test_query_dto.py (NEW)
+  * 6 tests: QueryRequest defaults, custom parameters, mmr/confidence tuning,
+    RAGAnswer construction, citations integration, immutability
+
+- tests/application/test_query_use_case.py (REWRITTEN)
+  * 11 comprehensive tests replacing NotImplementedError placeholder:
+    - Validation (empty question, invalid top_k)
+    - Retrieval (no candidates)
+    - Confidence gate (LowConfidenceError with threshold)
+    - Extractive fallback (LLM=None)
+    - LLM generation (success path)
+    - MMR enabled/disabled
+    - Deduplication behavior
+    - Result type success/failure patterns
+  * FakeEmbedding, FakeVectorStore, FakeLLM test doubles
+  * 93% coverage of query_knowledge_base.py
+
+ARCHITECTURE COMPLIANCE:
+- Result type eliminates exception-based control flow (Rust-style)
+- No direct infrastructure imports in use case (uses ports)
+- Domain services (ranking.py) fully integrated
+- Confidence gate leverages domain errors (LowConfidenceError)
+- Citations use domain models (Citation, RetrievedChunk)
+- All tests respect layering constraints
+
+TESTING:
+- 11 new tests for QueryKnowledgeBase
+- 5 new tests for LLM port
+- 6 new tests for query DTOs
+- Overall: 82 tests passing, 82% coverage
+- 0 linting errors (ruff)
+- 0 type errors (mypy)
+- 0 import layering violations (importlinter)
+
+TECHNICAL NOTES:
+- Oversample factor of 4x for MMR to ensure diversity pool
+- Default confidence threshold: 0.35 (tunable via QueryRequest)
+- Default MMR lambda: 0.5 (balanced relevance/diversity)
+- Deduplication threshold: 0.95 cosine similarity (hardcoded in use case)
+- Prompt template: BU domain-aware with numbered citations
+
+ISSUE: Confidence-Gate architecture implementation
