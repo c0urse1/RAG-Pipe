@@ -72,9 +72,16 @@ def build_ingest_use_case() -> IngestDocuments:
     )
 
 
-def build_query_use_case() -> QueryKnowledgeBase:
+def build_query_use_case(with_llm: bool = True) -> QueryKnowledgeBase:
+    """Build QueryKnowledgeBase use case.
+
+    Args:
+        with_llm: If True, includes LLM for generative answers.
+                  If False, uses extractive fallback (concatenated chunks).
+    """
     settings = AppSettings()
     return QueryKnowledgeBase(
         vector_store=build_vector_store(settings),
         embedding=build_embedding(settings),
+        llm=build_llm(settings) if with_llm else None,
     )
