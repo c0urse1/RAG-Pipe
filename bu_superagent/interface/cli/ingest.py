@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from bu_superagent.application.dto.ingest_dto import IngestDocumentRequest
 from bu_superagent.config.composition import build_ingest_use_case
@@ -8,8 +9,11 @@ def main() -> None:
     ap = argparse.ArgumentParser("ingest")
     ap.add_argument("--doc-id", required=True)
     ap.add_argument("--path", required=True)
-    ap.add_argument("--collection", default="kb_chunks_de_1024d")
-    ap.add_argument("--embedding-kind", default="mxbai", choices=["mxbai", "e5", "jina"])
+    ap.add_argument(
+        "--collection",
+        default=os.getenv("VECTOR_COLLECTION", "kb_chunks_de_1024d"),
+    )
+    ap.add_argument("--embedding-kind", default="e5", choices=["e5"])
     ap.add_argument("--target", type=int, default=1000)
     ap.add_argument("--overlap", type=int, default=150)
     ap.add_argument("--overhang", type=int, default=200)

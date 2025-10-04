@@ -1,15 +1,10 @@
-"""
-# Composition Root: injiziert konkrete Adapter in Use-Cases.
-# Wichtig: keine Geschäftslogik, nur Wiring.
-"""
-
+from bu_superagent.application.ports.embedding_port import EmbeddingPort
+from bu_superagent.application.ports.llm_port import LLMPort
 from bu_superagent.application.ports.vector_store_port import VectorStorePort
 from bu_superagent.application.use_cases.ingest_documents import IngestDocuments
 from bu_superagent.application.use_cases.query_knowledge_base import QueryKnowledgeBase
 from bu_superagent.config.settings import AppSettings
-from bu_superagent.infrastructure.embeddings.sentence_transformers_adapter import (
-    SentenceTransformersEmbeddingAdapter,
-)
+from bu_superagent.infrastructure.embeddings.hf_sentence_transformers import HFEmbeddingAdapter
 from bu_superagent.infrastructure.llm.vllm_openai_adapter import VLLMOpenAIAdapter
 from bu_superagent.infrastructure.parsing.pdf_text_extractor import PDFTextExtractorAdapter
 from bu_superagent.infrastructure.vectorstore.chroma_vector_store import ChromaVectorStoreAdapter
@@ -17,74 +12,69 @@ from bu_superagent.infrastructure.vectorstore.faiss_vector_store import FaissVec
 from bu_superagent.infrastructure.vectorstore.qdrant_vector_store import QdrantVectorStoreAdapter
 
 
-def _build_vector_store(s: AppSettings) -> VectorStorePort:
-    vb = (s.vector_backend or "").lower()
-    if vb == "qdrant":
-        return QdrantVectorStoreAdapter(
-            host=s.qdrant_host,
-            port=s.qdrant_port,
-            collection=s.qdrant_collection,
+def build_embedding(settings: AppSettings) -> EmbeddingPort:
+    return HFEmbeddingAdapter(
+        model_name=settings.embedding_model,
+        device=settings.embedding_device,
+    )
+
+
+def build_vector_store(settings: AppSettings) -> VectorStorePort:
+    backend = settings.vector_backend
+
+    if backend == "chroma":
+        chroma_adapter = ChromaVectorStoreAdapter(
+            persist_dir=settings.chroma_dir,
+            collection=settings.collection,
         )
-    if vb == "faiss":
-        return FaissVectorStoreAdapter(collection=s.qdrant_collection)
-    if vb == "chroma":
-        return ChromaVectorStoreAdapter(persist_dir=s.chroma_dir, collection=s.qdrant_collection)
-    # Fallback: choose FAISS (no external service) to keep tests local-only
-    return FaissVectorStoreAdapter(collection=s.qdrant_collection)
+        if hasattr(chroma_adapter, "store_text"):
+            chroma_adapter.store_text = settings.store_text_payload
+        return chroma_adapter
+
+    if backend == "qdrant":
+        return QdrantVectorStoreAdapter(
+            host=settings.qdrant_host,
+            port=settings.qdrant_port,
+            collection=settings.collection,
+        )
+
+    faiss_adapter = FaissVectorStoreAdapter()
+    faiss_adapter.collection = settings.collection
+    return faiss_adapter
+
+
+def build_llm(settings: AppSettings) -> LLMPort:
+    return VLLMOpenAIAdapter(
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key,
+        model=settings.llm_model,
+    )
+
+
+def build_embedding_adapter(settings: AppSettings) -> EmbeddingPort:
+    """Backward-compatible alias for legacy tests."""
+
+    return build_embedding(settings)
+
+
+def build_llm_adapter(settings: AppSettings) -> LLMPort:
+    """Backward-compatible alias for legacy tests."""
+
+    return build_llm(settings)
 
 
 def build_ingest_use_case() -> IngestDocuments:
-    s = AppSettings()
-    loader = PDFTextExtractorAdapter()
-    emb = SentenceTransformersEmbeddingAdapter(
-        model_mxbai=s.embedding_primary,
-        model_jina=s.embedding_fallback,
-        model_e5=s.embedding_e5,
-        device="cuda",
+    settings = AppSettings()
+    return IngestDocuments(
+        loader=PDFTextExtractorAdapter(),
+        embedding=build_embedding(settings),
+        vector_store=build_vector_store(settings),
     )
-    vs = _build_vector_store(s)
-    return IngestDocuments(loader=loader, embedding=emb, vector_store=vs)
 
 
 def build_query_use_case() -> QueryKnowledgeBase:
-    s = AppSettings()
-
-    _llm = VLLMOpenAIAdapter(base_url=s.vllm_base_url, model=s.vllm_model)
-    emb = SentenceTransformersEmbeddingAdapter(
-        model_mxbai=s.embedding_primary,
-        model_jina=s.embedding_fallback,
-        model_e5=s.embedding_e5,
-        device="cuda",  # falls verfügbar, sonst "cpu"
+    settings = AppSettings()
+    return QueryKnowledgeBase(
+        vector_store=build_vector_store(settings),
+        embedding=build_embedding(settings),
     )
-    vs = _build_vector_store(s)
-    # Optionally ensure upfront sizing for Qdrant; others handle internally
-    if isinstance(vs, QdrantVectorStoreAdapter):
-        vs.ensure_collection(s.qdrant_collection, s.embedding_dim)
-
-    # Use-Case braucht nur Ports; keine Technologie im Use-Case selbst.
-    return QueryKnowledgeBase(vector_store=vs, embedding=emb)
-
-
-# Optional: separate builders (keine Geschäftslogik, nur Wiring)
-def build_embedding_adapter(
-    settings: AppSettings | None = None,
-) -> SentenceTransformersEmbeddingAdapter:
-    s = settings or AppSettings()
-    return SentenceTransformersEmbeddingAdapter(
-        model_mxbai=s.embedding_primary,
-        model_jina=s.embedding_fallback,
-        model_e5=s.embedding_e5,
-    )
-
-
-def build_vector_store_adapter(settings: AppSettings | None = None) -> QdrantVectorStoreAdapter:
-    s = settings or AppSettings()
-    adapter = QdrantVectorStoreAdapter(
-        host=s.qdrant_host, port=s.qdrant_port, collection=s.qdrant_collection
-    )
-    return adapter
-
-
-def build_llm_adapter(settings: AppSettings | None = None) -> VLLMOpenAIAdapter:
-    s = settings or AppSettings()
-    return VLLMOpenAIAdapter(base_url=s.vllm_base_url, api_key=s.llm_api_key, model=s.vllm_model)

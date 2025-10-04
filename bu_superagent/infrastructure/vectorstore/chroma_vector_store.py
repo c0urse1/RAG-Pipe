@@ -3,15 +3,11 @@ from __future__ import annotations
 import os
 from collections.abc import Sequence
 from dataclasses import dataclass
+from importlib import import_module
 from typing import Any, cast
 
 from bu_superagent.application.ports.vector_store_port import RetrievedChunk, VectorStorePort
 from bu_superagent.domain.errors import VectorStoreError
-
-try:  # pragma: no cover - exercised via tests with monkeypatch
-    import chromadb
-except Exception:  # noqa: BLE001
-    chromadb = None
 
 
 @dataclass
@@ -23,8 +19,10 @@ class ChromaVectorStoreAdapter(VectorStorePort):
     _coll: Any | None = None
 
     def __post_init__(self) -> None:
-        if chromadb is None:
-            raise VectorStoreError("chromadb not installed.")
+        try:
+            chromadb = cast(Any, import_module("chromadb"))
+        except Exception as ex:  # noqa: BLE001
+            raise VectorStoreError("chromadb not installed.") from ex
         os.makedirs(self.persist_dir, exist_ok=True)
         try:
             self._client = chromadb.PersistentClient(path=self.persist_dir)
