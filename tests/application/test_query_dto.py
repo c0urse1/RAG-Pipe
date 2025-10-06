@@ -14,7 +14,8 @@ class TestQueryRequest:
         assert req.mmr is True
         assert req.mmr_lambda == 0.5
         assert req.confidence_threshold == 0.35
-        assert req.use_reranker is True
+        assert req.use_reranker is False  # Default: disabled for performance
+        assert req.pre_rerank_k == 20  # Default candidate pool for reranking
 
     def test_query_request_custom_values(self) -> None:
         """QueryRequest should accept custom values."""

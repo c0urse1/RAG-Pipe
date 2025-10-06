@@ -32,3 +32,11 @@ class AppSettings:
     llm_model: str = field(
         default_factory=lambda: os.getenv("LLM_MODEL", "meta-llama/Meta-Llama-3.1-8B-Instruct")
     )
+
+    reranker_model: str = field(
+        default_factory=lambda: os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
+    )
+    reranker_device: str = field(default_factory=lambda: os.getenv("RERANKER_DEVICE", "cpu"))
+    reranker_apply_sigmoid: bool = field(
+        default_factory=lambda: os.getenv("RERANKER_APPLY_SIGMOID", "true").lower() == "true"
+    )

@@ -13,6 +13,10 @@ def main() -> None:
     parser.add_argument("--no-llm", action="store_true", help="Use extractive fallback")
     parser.add_argument("--confidence", type=float, default=0.35, help="Confidence threshold (0-1)")
     parser.add_argument("--mmr", action="store_true", help="Enable MMR diversity")
+    parser.add_argument(
+        "--use-reranker", action="store_true", default=False, help="Enable reranking"
+    )
+    parser.add_argument("--pre-rerank-k", type=int, default=20, help="Candidates before rerank")
     # parse_known_args vermeidet Fehler bei unbekannten Flags (z. B. -q von pytest)
     args, _unknown = parser.parse_known_args()
 
@@ -21,12 +25,14 @@ def main() -> None:
         # Signalisiere Platzhalterzustand wie in Use-Case-Tests
         raise NotImplementedError
 
-    uc = build_query_use_case(with_llm=not args.no_llm)
+    uc = build_query_use_case(with_llm=not args.no_llm, with_reranker=args.use_reranker)
     req = QueryRequest(
         question=args.question,
         top_k=args.k,
         confidence_threshold=args.confidence,
         mmr=args.mmr,
+        use_reranker=args.use_reranker,
+        pre_rerank_k=args.pre_rerank_k,
     )
     result = uc.execute(req)
 

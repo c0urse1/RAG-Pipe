@@ -2,6 +2,11 @@
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bu_superagent*"]
+exclude = ["tests*", "var*", "docs*"]
+
 [project]
 name = "bu_superagent"
 version = "0.0.1"
@@ -46,6 +51,9 @@ bu-superagent = "bu_superagent.interface.cli.main:main"
 minversion = "8.0"
 addopts = "-q --cov=bu_superagent --cov-report=term-missing --cov-fail-under=75"
 testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
 
 [tool.black]
 line-length = 100

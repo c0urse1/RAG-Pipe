@@ -1,5 +1,7 @@
+from bu_superagent.application.ports.clock_port import ClockPort
 from bu_superagent.application.ports.embedding_port import EmbeddingPort
 from bu_superagent.application.ports.llm_port import LLMPort
+from bu_superagent.application.ports.reranker_port import RerankerPort
 from bu_superagent.application.ports.vector_store_port import VectorStorePort
 from bu_superagent.application.use_cases.ingest_documents import IngestDocuments
 from bu_superagent.application.use_cases.query_knowledge_base import QueryKnowledgeBase
@@ -7,6 +9,8 @@ from bu_superagent.config.settings import AppSettings
 from bu_superagent.infrastructure.embeddings.hf_sentence_transformers import HFEmbeddingAdapter
 from bu_superagent.infrastructure.llm.vllm_openai_adapter import VLLMOpenAIAdapter
 from bu_superagent.infrastructure.parsing.pdf_text_extractor import PDFTextExtractorAdapter
+from bu_superagent.infrastructure.reranking.cross_encoder_adapter import CrossEncoderAdapter
+from bu_superagent.infrastructure.time.system_clock import SystemClock
 from bu_superagent.infrastructure.vectorstore.chroma_vector_store import ChromaVectorStoreAdapter
 from bu_superagent.infrastructure.vectorstore.faiss_vector_store import FaissVectorStoreAdapter
 from bu_superagent.infrastructure.vectorstore.qdrant_vector_store import QdrantVectorStoreAdapter
@@ -51,6 +55,41 @@ def build_llm(settings: AppSettings) -> LLMPort:
     )
 
 
+def build_clock() -> ClockPort:
+    """Build clock adapter for time operations.
+
+    Returns:
+        SystemClock providing real UTC time for production use.
+
+    Note:
+        Tests should inject FakeClock or similar test doubles instead.
+    """
+    return SystemClock()
+
+
+def build_reranker(settings: AppSettings) -> RerankerPort:
+    """Build reranker adapter for semantic reranking.
+
+    Returns:
+        CrossEncoderAdapter for 2-stage retrieve→rerank RAG pattern.
+        Uses cross-encoder model for higher accuracy than bi-encoder retrieval.
+
+    Environment variables:
+        RERANKER_MODEL: Model name (default: BAAI/bge-reranker-v2-m3)
+        RERANKER_DEVICE: cpu or cuda (default: cpu)
+        RERANKER_APPLY_SIGMOID: Apply sigmoid to scores (default: true)
+
+    Note:
+        Cross-encoders are slower than bi-encoders, so rerank only Top-K
+        results (e.g., K=100) from initial retrieval, not the entire corpus.
+    """
+    return CrossEncoderAdapter(
+        model_name=settings.reranker_model,
+        device=settings.reranker_device,
+        apply_sigmoid=settings.reranker_apply_sigmoid,
+    )
+
+
 def build_embedding_adapter(settings: AppSettings) -> EmbeddingPort:
     """Backward-compatible alias for legacy tests."""
 
@@ -72,16 +111,19 @@ def build_ingest_use_case() -> IngestDocuments:
     )
 
 
-def build_query_use_case(with_llm: bool = True) -> QueryKnowledgeBase:
+def build_query_use_case(with_llm: bool = True, with_reranker: bool = False) -> QueryKnowledgeBase:
     """Build QueryKnowledgeBase use case.
 
     Args:
         with_llm: If True, includes LLM for generative answers.
                   If False, uses extractive fallback (concatenated chunks).
+        with_reranker: If True, adds cross-encoder reranking after retrieval.
+                       Improves accuracy but adds latency (2-stage RAG pattern).
     """
     settings = AppSettings()
     return QueryKnowledgeBase(
         vector_store=build_vector_store(settings),
         embedding=build_embedding(settings),
         llm=build_llm(settings) if with_llm else None,
+        reranker=build_reranker(settings) if with_reranker else None,
     )

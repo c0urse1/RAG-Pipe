@@ -6,10 +6,17 @@ from typing import Generic, TypeVar
 from bu_superagent.application.dto.query_dto import QueryRequest, RAGAnswer
 from bu_superagent.application.ports.embedding_port import EmbeddingPort
 from bu_superagent.application.ports.llm_port import LLMPort
+from bu_superagent.application.ports.reranker_port import RerankerPort
 from bu_superagent.application.ports.vector_store_port import VectorStorePort
-from bu_superagent.domain.errors import LowConfidenceError, RetrievalError, ValidationError
+from bu_superagent.domain.errors import (
+    LowConfidenceError,
+    RerankerError,
+    RetrievalError,
+    ValidationError,
+)
 from bu_superagent.domain.models import Citation, RetrievedChunk
 from bu_superagent.domain.services.ranking import deduplicate_by_cosine, mmr, passes_confidence
+from bu_superagent.domain.services.reranking import sort_by_scores_desc
 
 T = TypeVar("T")
 E = TypeVar("E", bound=Exception)
@@ -38,11 +45,20 @@ class Result(Generic[T, E]):
 
 
 class QueryKnowledgeBase:
-    """Orchestrates: validate → embed → search → domain ranking → confidence → LLM generate.
+    """Orchestrates: validate → embed → search → [rerank] → dedup/MMR → confidence → LLM.
 
     Why (SAM): The use case orchestrates ports, applies pure domain services
-    (MMR/dedup), enforces the confidence gate (business rule), and never calls
-    infra libraries directly. The Result type avoids silent failures.
+    (reranking, MMR/dedup), enforces the confidence gate (business rule), and never
+    calls infra libraries directly. The Result type avoids silent failures.
+
+    RAG Pipeline:
+    1. Validate input
+    2. Embed query (EmbeddingPort)
+    3. Retrieve candidates (VectorStorePort) - oversample for reranking/MMR
+    4. Optional cross-encoder reranking (RerankerPort) - BEFORE dedup/MMR
+    5. Domain post-processing: dedup + optional MMR
+    6. Confidence gate check
+    7. LLM generation or extractive fallback
 
     Confidence-Gate reference: Under threshold → escalate with complete context.
     """
@@ -52,6 +68,7 @@ class QueryKnowledgeBase:
         embedding: EmbeddingPort,
         vector_store: VectorStorePort,
         llm: LLMPort | None = None,
+        reranker: RerankerPort | None = None,
     ) -> None:
         """Initialize query use case with required ports.
 
@@ -59,10 +76,12 @@ class QueryKnowledgeBase:
             embedding: Port for embedding text queries
             vector_store: Port for vector similarity search
             llm: Optional port for answer generation (extractive fallback if None)
+            reranker: Optional port for cross-encoder reranking (2-stage RAG)
         """
         self.embedding = embedding
         self.vector_store = vector_store
         self.llm = llm
+        self.reranker = reranker
 
     def _build_prompt(self, q: str, chunks: list[RetrievedChunk]) -> str:
         """Build LLM prompt with question and retrieved context.
@@ -87,16 +106,17 @@ class QueryKnowledgeBase:
         )
 
     def execute(self, req: QueryRequest) -> Result[RAGAnswer, Exception]:
-        """Execute RAG query pipeline with confidence gating.
+        """Execute RAG query pipeline with optional reranking and confidence gating.
 
         Pipeline stages:
         1. Validate input
         2. Embed query
-        3. Retrieve candidates (oversample for MMR)
-        4. Domain post-processing (dedup + optional MMR)
-        5. Confidence gate check
-        6. LLM generation (or extractive fallback)
-        7. Shape citations
+        3. Retrieve candidates (oversample for reranking/MMR)
+        4. Optional cross-encoder reranking (if use_reranker=True and port provided)
+        5. Domain post-processing (dedup + optional MMR)
+        6. Confidence gate check
+        7. LLM generation (or extractive fallback)
+        8. Shape citations
 
         Args:
             req: Query request with question and parameters
@@ -114,16 +134,29 @@ class QueryKnowledgeBase:
         except Exception as e:  # noqa: BLE001
             return Result.failure(e)
 
-        # 3) Retrieve candidates (oversample for MMR)
+        # 3) Retrieve candidates (oversample for reranking/MMR)
+        # Use larger pool if reranking to give cross-encoder more candidates
+        search_k = max(req.top_k * 4, req.pre_rerank_k if req.use_reranker else 20)
         try:
-            candidates = self.vector_store.search(q_vec, top_k=max(req.top_k * 4, 20))
+            candidates = self.vector_store.search(q_vec, top_k=search_k)
         except Exception as e:  # noqa: BLE001
             return Result.failure(e)
 
         if not candidates:
             return Result.failure(RetrievalError("no candidates returned from vector store"))
 
-        # 4) Domain post-processing: dedup + optional MMR
+        # 4) Optional cross-encoder reranking (BEFORE dedup/MMR for best accuracy)
+        if req.use_reranker and self.reranker is not None and candidates:
+            try:
+                texts = [c.text for c in candidates]
+                scores = self.reranker.score(req.question, texts)
+                # Reorder candidates by cross-encoder scores (pure domain function)
+                candidates = sort_by_scores_desc(candidates, scores)
+            except Exception as e:  # noqa: BLE001
+                # Wrap infrastructure errors in domain error
+                return Result.failure(RerankerError(detail=f"Cross-encoder reranking failed: {e}"))
+
+        # 5) Domain post-processing: dedup + optional MMR
         deduped = deduplicate_by_cosine(candidates, threshold=0.95)
         final = mmr(deduped, q_vec, req.top_k, req.mmr_lambda) if req.mmr else deduped[: req.top_k]
 
