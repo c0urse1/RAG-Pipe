@@ -26,6 +26,13 @@ class DocumentError(DomainError):
 
 
 @dataclass(frozen=True)
+class RerankerError(DomainError):
+    """Reranking operation failed or is misconfigured."""
+
+    detail: str = ""
+
+
+@dataclass(frozen=True)
 class LowConfidenceError(DomainError):
     """Retrieval confidence below acceptable threshold."""
 

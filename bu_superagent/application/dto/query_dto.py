@@ -14,7 +14,8 @@ class QueryRequest:
     mmr: bool = True  # Use Maximal Marginal Relevance for diversity
     mmr_lambda: float = 0.5  # Trade-off: 0=diversity, 1=relevance
     confidence_threshold: float = 0.35  # Minimum confidence for answering
-    use_reranker: bool = True  # Apply reranking (if available)
+    use_reranker: bool = False  # Apply cross-encoder reranking (if reranker port provided)
+    pre_rerank_k: int = 20  # Candidate pool size for reranking (>= top_k; ignored if !use_reranker)
 
 
 @dataclass(frozen=True)
