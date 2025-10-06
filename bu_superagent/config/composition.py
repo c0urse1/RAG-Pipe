@@ -1,3 +1,4 @@
+from bu_superagent.application.ports.clock_port import ClockPort
 from bu_superagent.application.ports.embedding_port import EmbeddingPort
 from bu_superagent.application.ports.llm_port import LLMPort
 from bu_superagent.application.ports.vector_store_port import VectorStorePort
@@ -7,6 +8,7 @@ from bu_superagent.config.settings import AppSettings
 from bu_superagent.infrastructure.embeddings.hf_sentence_transformers import HFEmbeddingAdapter
 from bu_superagent.infrastructure.llm.vllm_openai_adapter import VLLMOpenAIAdapter
 from bu_superagent.infrastructure.parsing.pdf_text_extractor import PDFTextExtractorAdapter
+from bu_superagent.infrastructure.time.system_clock import SystemClock
 from bu_superagent.infrastructure.vectorstore.chroma_vector_store import ChromaVectorStoreAdapter
 from bu_superagent.infrastructure.vectorstore.faiss_vector_store import FaissVectorStoreAdapter
 from bu_superagent.infrastructure.vectorstore.qdrant_vector_store import QdrantVectorStoreAdapter
@@ -49,6 +51,18 @@ def build_llm(settings: AppSettings) -> LLMPort:
         api_key=settings.llm_api_key,
         model=settings.llm_model,
     )
+
+
+def build_clock() -> ClockPort:
+    """Build clock adapter for time operations.
+
+    Returns:
+        SystemClock providing real UTC time for production use.
+
+    Note:
+        Tests should inject FakeClock or similar test doubles instead.
+    """
+    return SystemClock()
 
 
 def build_embedding_adapter(settings: AppSettings) -> EmbeddingPort:
