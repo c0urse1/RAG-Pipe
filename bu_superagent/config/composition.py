@@ -127,3 +127,77 @@ def build_query_use_case(with_llm: bool = True, with_reranker: bool = False) -> 
         llm=build_llm(settings) if with_llm else None,
         reranker=build_reranker(settings) if with_reranker else None,
     )
+
+
+def build_work_queue(settings: AppSettings):
+    """Build work queue adapter for async task distribution.
+
+    Returns:
+        Fake work queue adapter (real Redis adapter requires redis-py).
+        Replace with RedisWorkQueueAdapter for production.
+    """
+
+    # Placeholder: return fake adapter for now
+    # Production: from bu_superagent.infrastructure.queues.redis_streams_adapter import (
+    #     RedisWorkQueueAdapter,
+    # )
+    class FakeWorkQueue:
+        def enqueue(self, topic, payload):
+            from bu_superagent.domain.types import Result
+
+            return Result.success(f"fake-{topic}-{hash(str(payload))}")
+
+        def dequeue_batch(self, topic, max_n):
+            from bu_superagent.domain.types import Result
+
+            return Result.success([])
+
+        def ack(self, topic, ack_ids):
+            from bu_superagent.domain.types import Result
+
+            return Result.success(None)
+
+    return FakeWorkQueue()
+
+
+def build_blob_store(settings: AppSettings):
+    """Build blob store adapter for large document storage.
+
+    Returns:
+        Fake blob store adapter (real MinIO adapter requires minio-py).
+        Replace with MinioBlobStoreAdapter for production.
+    """
+
+    # Placeholder: return fake adapter for now
+    # Production: from bu_superagent.infrastructure.blobstores.minio_adapter import (
+    #     MinioBlobStoreAdapter,
+    # )
+    class FakeBlobStore:
+        def put(self, key, data, meta):
+            from bu_superagent.domain.types import Result
+
+            return Result.success(key)
+
+        def get(self, key):
+            from bu_superagent.domain.types import Result
+
+            return Result.success(b"")
+
+    return FakeBlobStore()
+
+
+def build_telemetry(settings: AppSettings):
+    """Build telemetry adapter for metrics and tracing.
+
+    Returns:
+        OpenTelemetryAdapter (gracefully degrades if opentelemetry-sdk not installed).
+    """
+    from bu_superagent.infrastructure.telemetry.otel_adapter import OpenTelemetryAdapter, OtelConfig
+
+    cfg = OtelConfig(
+        service_name="bu-superagent",
+        otlp_endpoint=None,  # Set via env var or settings
+        environment="production",
+        enable_console=False,
+    )
+    return OpenTelemetryAdapter(cfg)
