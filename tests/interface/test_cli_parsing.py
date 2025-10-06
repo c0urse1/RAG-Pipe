@@ -103,7 +103,8 @@ def test_cli_main_with_question(monkeypatch, capsys):
             return Result.success(answer)
 
     monkeypatch.setattr(
-        "bu_superagent.interface.cli.main.build_query_use_case", lambda with_llm: FakeUseCase()
+        "bu_superagent.interface.cli.main.build_query_use_case",
+        lambda with_llm, with_reranker=False: FakeUseCase(),
     )
     monkeypatch.setattr(
         sys,
