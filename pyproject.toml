@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["bu_superagent*"]
-exclude = ["tests*", "var*", "docs*"]
+exclude = ["tests*", "var*", "docs*", ".venv*", "bu_superagent.egg-info*"]
 
 [project]
 name = "bu_superagent"
@@ -17,10 +17,7 @@ dependencies = [
   "fastapi>=0.115.0",
   "uvicorn>=0.30.0",
   "pydantic>=2.8.0",
-  # RAG runtime deps (per 4.1)
-  "qdrant-client>=1.9.0,<2.0.0",
-  "chromadb>=0.5.5,<1.0.0",
-  "faiss-cpu>=1.7.4.post2; platform_system != 'Windows' or platform_machine == 'x86_64'",
+  # Core RAG dependencies (no C++ compiler required)
   "numpy>=1.26",
   "sentence-transformers>=3.0.1,<4.0.0",
   "transformers>=4.43.0,<5.0.0",
@@ -33,6 +30,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+vectorstores = [
+  # Optional vector store backends (some require C++ compiler on Windows)
+  "qdrant-client>=1.9.0,<2.0.0",
+  "chromadb>=0.5.5,<1.0.0",
+  "faiss-cpu>=1.7.4.post2",
+]
 dev = [
   "pre-commit>=3.7",
   "ruff>=0.5.0",
