@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import Any
 
-from bu_superagent.application.scalable_ports import TelemetryPort
+from bu_superagent.application.ports.telemetry_port import TelemetryPort
 
 
 @dataclass

@@ -4,12 +4,44 @@ Why: Ingestion in 512er-Batches (GPU-freundlich), strikt Result-basiert,
      Queue-fähig (optional wq.enqueue im Orchestrator-Use-Case).
 """
 
-from typing import Any
+from typing import Any, Protocol
 
 from bu_superagent.application.dtos import IngestRequest
-from bu_superagent.application.scalable_ports import EmbeddingPort, VectorStorePort, WorkQueuePort
+from bu_superagent.application.ports.work_queue_port import WorkQueuePort
 from bu_superagent.domain.errors import DomainError, ValidationError
-from bu_superagent.domain.types import Result
+from bu_superagent.domain.types import Result, Vector
+
+
+class EmbeddingPort(Protocol):
+    """Port for text embedding operations."""
+
+    def embed_texts(self, texts: list[str]) -> Result[list[Vector], DomainError]:
+        """Embed multiple texts into vectors."""
+        ...
+
+
+class VectorStorePort(Protocol):
+    """Port for basic vector store operations."""
+
+    def upsert(
+        self,
+        collection: str,
+        ids: list[str],
+        vectors: list[Vector],
+        metadata: list[dict[str, Any]],
+    ) -> Result[None, DomainError]:
+        """Upsert vectors with metadata into collection."""
+        ...
+
+    def search(
+        self,
+        collection: str,
+        vector: Vector,
+        top_k: int,
+        filters: dict[str, Any] | None = None,
+    ) -> Result[list[dict[str, Any]], DomainError]:
+        """Search for similar vectors in collection."""
+        ...
 
 
 class IngestDocumentsParallel:

@@ -4,11 +4,18 @@ Why: Große Batches + GPU → hoher Durchsatz beim Ingest.
 """
 
 from importlib import import_module
-from typing import Any
+from typing import Any, Protocol
 
-from bu_superagent.application.scalable_ports import EmbeddingPort
 from bu_superagent.domain.errors import DomainError, EmbeddingError
 from bu_superagent.domain.types import Result, Vector
+
+
+class EmbeddingPort(Protocol):
+    """Port for text embedding operations."""
+
+    def embed_texts(self, texts: list[str]) -> Result[list[Vector], DomainError]:
+        """Embed multiple texts into vectors."""
+        ...
 
 
 def _prefix_e5_passage(text: str) -> str:

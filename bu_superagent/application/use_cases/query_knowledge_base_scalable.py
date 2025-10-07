@@ -4,10 +4,9 @@ Why: Multi-stage Retrieval (Vector → optional Hybrid RRF → optional MMR),
      Confidence-Gate als letzte Schranke.
 """
 
-from typing import Any
+from typing import Any, Protocol
 
 from bu_superagent.application.dtos import QueryRequest
-from bu_superagent.application.scalable_ports import EmbeddingPort, VectorStorePort
 from bu_superagent.domain.errors import (
     DomainError,
     LowConfidenceError,
@@ -16,6 +15,38 @@ from bu_superagent.domain.errors import (
 )
 from bu_superagent.domain.services.ranking import mmr, passes_confidence, rrf
 from bu_superagent.domain.types import Result, Vector
+
+
+class EmbeddingPort(Protocol):
+    """Port for text embedding operations."""
+
+    def embed_texts(self, texts: list[str]) -> Result[list[Vector], DomainError]:
+        """Embed multiple texts into vectors."""
+        ...
+
+
+class VectorStorePort(Protocol):
+    """Port for basic vector store operations."""
+
+    def upsert(
+        self,
+        collection: str,
+        ids: list[str],
+        vectors: list[Vector],
+        metadata: list[dict[str, Any]],
+    ) -> Result[None, DomainError]:
+        """Upsert vectors with metadata into collection."""
+        ...
+
+    def search(
+        self,
+        collection: str,
+        vector: Vector,
+        top_k: int,
+        filters: dict[str, Any] | None = None,
+    ) -> Result[list[dict[str, Any]], DomainError]:
+        """Search for similar vectors in collection."""
+        ...
 
 
 class QueryKnowledgeBaseScalable:

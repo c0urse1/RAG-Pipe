@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import Any
 
-from bu_superagent.application.scalable_ports import BlobStorePort
+from bu_superagent.application.ports.blob_store_port import BlobStorePort
 from bu_superagent.domain.errors import DomainError
 from bu_superagent.domain.types import Result
 

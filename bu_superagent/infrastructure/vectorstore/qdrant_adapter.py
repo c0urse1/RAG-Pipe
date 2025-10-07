@@ -6,11 +6,35 @@ Why: Qdrant-Cluster bringt Sharding/Replication/Quantization;
 
 from dataclasses import dataclass
 from importlib import import_module
-from typing import Any
+from typing import Any, Protocol
 
-from bu_superagent.application.scalable_ports import VectorStoreAdminPort, VectorStorePort
+from bu_superagent.application.ports.vector_store_admin_port import VectorStoreAdminPort
 from bu_superagent.domain.errors import DomainError, VectorStoreError
 from bu_superagent.domain.types import Result, Vector
+
+
+class VectorStorePort(Protocol):
+    """Port for basic vector store operations."""
+
+    def upsert(
+        self,
+        collection: str,
+        ids: list[str],
+        vectors: list[Vector],
+        metadata: list[dict[str, Any]],
+    ) -> Result[None, DomainError]:
+        """Upsert vectors with metadata into collection."""
+        ...
+
+    def search(
+        self,
+        collection: str,
+        vector: Vector,
+        top_k: int,
+        filters: dict[str, Any] | None = None,
+    ) -> Result[list[dict[str, Any]], DomainError]:
+        """Search for similar vectors in collection."""
+        ...
 
 
 @dataclass

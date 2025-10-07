@@ -1,29 +1,50 @@
-"""Depfrom typing import Any, TYPE_CHECKING
-
-from bu_superagent.application.scalable_ports import (
-    BlobStorePort,
-    EmbeddingPort,
-    TelemetryPort,
-    VectorStorePort,
-    WorkQueuePort,
-)njection container with environment-driven wiring.
+"""Dependency injection container with environment-driven wiring.
 
 Why: Einzige Stelle mit Env; Feature-Flags erlauben toggles
      (Hybrid, Quantization, Shards).
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
-from bu_superagent.application.ports import (
-    BlobStorePort,
-    EmbeddingPort,
-    TelemetryPort,
-    VectorStorePort,
-    WorkQueuePort,
-)
+from bu_superagent.application.ports.blob_store_port import BlobStorePort
+from bu_superagent.application.ports.telemetry_port import TelemetryPort
+from bu_superagent.application.ports.work_queue_port import WorkQueuePort
 from bu_superagent.config.settings import AppSettings
 from bu_superagent.domain.errors import DomainError
-from bu_superagent.domain.types import Result
+from bu_superagent.domain.types import Result, Vector
+
+
+class EmbeddingPort(Protocol):
+    """Port for text embedding operations."""
+
+    def embed_texts(self, texts: list[str]) -> Result[list[Vector], DomainError]:
+        """Embed multiple texts into vectors."""
+        ...
+
+
+class VectorStorePort(Protocol):
+    """Port for basic vector store operations."""
+
+    def upsert(
+        self,
+        collection: str,
+        ids: list[str],
+        vectors: list[Vector],
+        metadata: list[dict[str, Any]],
+    ) -> Result[None, DomainError]:
+        """Upsert vectors with metadata into collection."""
+        ...
+
+    def search(
+        self,
+        collection: str,
+        vector: Vector,
+        top_k: int,
+        filters: dict[str, Any] | None = None,
+    ) -> Result[list[dict[str, Any]], DomainError]:
+        """Search for similar vectors in collection."""
+        ...
+
 
 if TYPE_CHECKING:
     from bu_superagent.application.use_cases.ingest_documents_parallel import (
