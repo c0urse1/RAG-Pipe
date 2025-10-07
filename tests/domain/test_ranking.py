@@ -1,14 +1,7 @@
-"""Tests for domain ranking services (MMR, dedup, confidence)."""
-
-import pytest
+"""Tests for domain ranking services (MMR, dedup)."""
 
 from bu_superagent.domain.models import RetrievedChunk
-from bu_superagent.domain.services.ranking import (
-    deduplicate_by_cosine,
-    mmr,
-    passes_confidence,
-    top_score,
-)
+from bu_superagent.domain.services.ranking import deduplicate_by_cosine, mmr
 
 
 # Helper to create test chunks
@@ -17,53 +10,9 @@ def make_chunk(id_: str, score: float, vector: list[float] | None = None) -> Ret
         id=id_,
         text=f"Text for {id_}",
         metadata={"doc_id": id_},
-        vector=vector,
+        vector=tuple(vector) if vector else None,
         score=score,
     )
-
-
-class TestTopScore:
-    @pytest.mark.parametrize(
-        "chunks,expected",
-        [
-            ([make_chunk("c1", 0.95), make_chunk("c2", 0.85)], 0.95),
-            ([], 0.0),
-            ([make_chunk("c1", 0.42)], 0.42),
-            ([make_chunk("c1", 0.95), make_chunk("c2", 0.85), make_chunk("c3", 0.75)], 0.95),
-        ],
-    )
-    def test_top_score_parametrized(self, chunks: list[RetrievedChunk], expected: float) -> None:
-        """top_score should extract highest score from chunks or 0.0 if empty."""
-        assert top_score(chunks) == expected
-
-
-class TestPassesConfidence:
-    def test_passes_confidence_above_threshold(self) -> None:
-        """passes_confidence should return True when score >= threshold."""
-        chunks = [make_chunk("c1", 0.8), make_chunk("c2", 0.6)]
-        passes, score = passes_confidence(chunks, threshold=0.7)
-        assert passes is True
-        assert score == 0.8
-
-    def test_passes_confidence_below_threshold(self) -> None:
-        """passes_confidence should return False when score < threshold."""
-        chunks = [make_chunk("c1", 0.5), make_chunk("c2", 0.4)]
-        passes, score = passes_confidence(chunks, threshold=0.6)
-        assert passes is False
-        assert score == 0.5
-
-    def test_passes_confidence_exactly_at_threshold(self) -> None:
-        """passes_confidence should return True when score == threshold."""
-        chunks = [make_chunk("c1", 0.75)]
-        passes, score = passes_confidence(chunks, threshold=0.75)
-        assert passes is True
-        assert score == 0.75
-
-    def test_passes_confidence_empty_list(self) -> None:
-        """passes_confidence should return False for empty list."""
-        passes, score = passes_confidence([], threshold=0.5)
-        assert passes is False
-        assert score == 0.0
 
 
 class TestDeduplicateByCosine:
@@ -108,14 +57,14 @@ class TestDeduplicateByCosine:
         """Should respect custom threshold."""
         chunks = [
             make_chunk("c1", 0.9, vector=[1.0, 0.0, 0.0]),
-            make_chunk("c2", 0.8, vector=[0.9, 0.1, 0.0]),  # cosine ~0.9
+            make_chunk("c2", 0.8, vector=[0.7, 0.7, 0.0]),  # cosine ~0.7
         ]
-        # High threshold (0.95) should keep both
+        # High threshold (0.95) should keep both (cosine < 0.95)
         result_high = deduplicate_by_cosine(chunks, threshold=0.95)
         assert len(result_high) == 2
 
-        # Low threshold (0.85) should drop c2
-        result_low = deduplicate_by_cosine(chunks, threshold=0.85)
+        # Low threshold (0.65) should drop c2 (cosine > 0.65)
+        result_low = deduplicate_by_cosine(chunks, threshold=0.65)
         assert len(result_low) == 1
         assert result_low[0].id == "c1"
 
@@ -141,7 +90,7 @@ class TestMMR:
             make_chunk("c4", 0.6, vector=[0.5, 0.5, 0.0]),
         ]
         query_vec = [1.0, 0.0, 0.0]
-        result = mmr(chunks, query_vec, k=2, lambda_mult=0.5)
+        result = mmr(query_vec, chunks, top_k=2, lambda_mult=0.5)
         assert len(result) == 2
 
     def test_mmr_pure_relevance(self) -> None:
@@ -152,7 +101,7 @@ class TestMMR:
             make_chunk("c3", 0.7, vector=[0.0, 1.0, 0.0]),
         ]
         query_vec = [1.0, 0.0, 0.0]
-        result = mmr(chunks, query_vec, k=2, lambda_mult=1.0)
+        result = mmr(query_vec, chunks, top_k=2, lambda_mult=1.0)
         # Should pick most relevant first (c1, c2)
         assert result[0].id == "c1"
         assert result[1].id == "c2"
@@ -165,7 +114,7 @@ class TestMMR:
             make_chunk("c3", 0.7, vector=[0.0, 1.0, 0.0]),  # orthogonal to c1
         ]
         query_vec = [1.0, 0.0, 0.0]
-        result = mmr(chunks, query_vec, k=2, lambda_mult=0.0)
+        result = mmr(query_vec, chunks, top_k=2, lambda_mult=0.0)
         # Should pick c1 first (highest relevance), then c3 (most diverse)
         assert result[0].id == "c1"
         assert result[1].id == "c3"
@@ -177,7 +126,7 @@ class TestMMR:
             make_chunk("c2", 0.8, vector=[0.0, 1.0, 0.0]),
         ]
         query_vec = [1.0, 0.0, 0.0]
-        result = mmr(chunks, query_vec, k=2, lambda_mult=0.5)
+        result = mmr(query_vec, chunks, top_k=2, lambda_mult=0.5)
         assert len(result) == 2
 
     def test_mmr_k_larger_than_candidates(self) -> None:
@@ -187,24 +136,24 @@ class TestMMR:
             make_chunk("c2", 0.8, vector=[0.0, 1.0, 0.0]),
         ]
         query_vec = [1.0, 0.0, 0.0]
-        result = mmr(chunks, query_vec, k=10, lambda_mult=0.5)
+        result = mmr(query_vec, chunks, top_k=10, lambda_mult=0.5)
         assert len(result) == 2
 
     def test_mmr_empty_candidates(self) -> None:
         """MMR should handle empty candidate list."""
-        result = mmr([], query_vec=[1.0, 0.0, 0.0], k=5, lambda_mult=0.5)
+        result = mmr(query_vec=[1.0, 0.0, 0.0], candidates=[], top_k=5, lambda_mult=0.5)
         assert result == []
 
     def test_mmr_k_zero(self) -> None:
         """MMR with k=0 should return empty list."""
         chunks = [make_chunk("c1", 0.9, vector=[1.0, 0.0, 0.0])]
-        result = mmr(chunks, query_vec=[1.0, 0.0, 0.0], k=0, lambda_mult=0.5)
+        result = mmr(query_vec=[1.0, 0.0, 0.0], candidates=chunks, top_k=0, lambda_mult=0.5)
         assert result == []
 
     def test_mmr_negative_k_returns_empty(self) -> None:
         """MMR with negative k should robustly return empty list."""
         chunks = [make_chunk("c1", 0.9, vector=[1.0, 0.0, 0.0])]
-        result = mmr(chunks, query_vec=[1.0, 0.0, 0.0], k=-1, lambda_mult=0.5)
+        result = mmr(query_vec=[1.0, 0.0, 0.0], candidates=chunks, top_k=-1, lambda_mult=0.5)
         assert result == []
 
     def test_mmr_tie_break_is_stable(self) -> None:
@@ -214,7 +163,7 @@ class TestMMR:
             make_chunk("c2", 0.8, vector=[1.0, 0.0, 0.0]),  # identical to c1
         ]
         query_vec = [1.0, 0.0, 0.0]
-        result = mmr(chunks, query_vec, k=1, lambda_mult=1.0)
+        result = mmr(query_vec, chunks, top_k=1, lambda_mult=1.0)
         assert [c.id for c in result] == ["c1"]  # keep first → stable
 
     def test_mmr_all_missing_vectors_falls_back_to_score(self) -> None:
@@ -224,40 +173,40 @@ class TestMMR:
             make_chunk("b", 0.8, vector=None),
             make_chunk("c", 0.7, vector=None),
         ]
-        result = mmr(chunks, query_vec=[1.0, 0.0, 0.0], k=2, lambda_mult=0.5)
+        result = mmr(query_vec=[1.0, 0.0, 0.0], candidates=chunks, top_k=2, lambda_mult=0.5)
         assert [c.id for c in result] == ["a", "b"]
 
 
 class TestCosineHelper:
     def test_cosine_orthogonal_vectors(self) -> None:
         """Cosine of orthogonal vectors should be 0."""
-        from bu_superagent.domain.services.ranking import _cosine
+        from bu_superagent.domain.services.ranking import _cos_sim
 
         u = [1.0, 0.0, 0.0]
         v = [0.0, 1.0, 0.0]
-        assert abs(_cosine(u, v)) < 1e-6
+        assert abs(_cos_sim(u, v)) < 1e-6
 
     def test_cosine_identical_vectors(self) -> None:
         """Cosine of identical vectors should be 1."""
-        from bu_superagent.domain.services.ranking import _cosine
+        from bu_superagent.domain.services.ranking import _cos_sim
 
         u = [1.0, 0.0, 0.0]
         v = [1.0, 0.0, 0.0]
-        assert abs(_cosine(u, v) - 1.0) < 1e-6
+        assert abs(_cos_sim(u, v) - 1.0) < 1e-6
 
     def test_cosine_opposite_vectors(self) -> None:
         """Cosine of opposite vectors should be -1."""
-        from bu_superagent.domain.services.ranking import _cosine
+        from bu_superagent.domain.services.ranking import _cos_sim
 
         u = [1.0, 0.0, 0.0]
         v = [-1.0, 0.0, 0.0]
-        assert abs(_cosine(u, v) - (-1.0)) < 1e-6
+        assert abs(_cos_sim(u, v) - (-1.0)) < 1e-6
 
     def test_cosine_length_mismatch_truncates(self) -> None:
         """Cosine with mismatched lengths should truncate to shorter (zip behavior)."""
-        from bu_superagent.domain.services.ranking import _cosine
+        from bu_superagent.domain.services.ranking import _cos_sim
 
         # zip truncates to shorter length without strict=True
         # [1.0] * [1.0] = 1.0, second element ignored
-        result = _cosine([1.0, 0.0], [1.0])
+        result = _cos_sim([1.0, 0.0], [1.0])
         assert abs(result - 1.0) < 1e-6
