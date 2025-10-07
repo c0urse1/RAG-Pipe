@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import Any
 
-from bu_superagent.application.ports import VectorStoreAdminPort, VectorStorePort
+from bu_superagent.application.scalable_ports import VectorStoreAdminPort, VectorStorePort
 from bu_superagent.domain.errors import DomainError, VectorStoreError
 from bu_superagent.domain.types import Result, Vector
 
@@ -130,7 +130,9 @@ class QdrantVectorStoreAdapter(VectorStorePort, VectorStoreAdminPort):
         except Exception as ex:
             return Result.failure(VectorStoreError(f"ensure_collection: {ex}"))
 
-    def set_quantization(self, name: str, kind: str, params: dict) -> Result[None, DomainError]:
+    def set_quantization(
+        self, name: str, kind: str, params: dict[str, Any]
+    ) -> Result[None, DomainError]:
         """Set quantization configuration for collection.
 
         Args:
@@ -180,7 +182,7 @@ class QdrantVectorStoreAdapter(VectorStorePort, VectorStoreAdminPort):
         except Exception as ex:
             return Result.failure(VectorStoreError(f"set_quantization: {ex}"))
 
-    def set_search_params(self, name: str, params: dict) -> Result[None, DomainError]:
+    def set_search_params(self, name: str, params: dict[str, Any]) -> Result[None, DomainError]:
         """Set search parameters for collection.
 
         Args:
@@ -216,7 +218,7 @@ class QdrantVectorStoreAdapter(VectorStorePort, VectorStoreAdminPort):
         collection: str,
         ids: list[str],
         vectors: list[Vector],
-        metadata: list[dict],
+        metadata: list[dict[str, Any]],
     ) -> Result[None, DomainError]:
         """Upsert vectors with metadata into collection.
 
@@ -262,8 +264,8 @@ class QdrantVectorStoreAdapter(VectorStorePort, VectorStoreAdminPort):
         collection: str,
         vector: Vector,
         top_k: int,
-        filters: dict | None = None,
-    ) -> Result[list[dict], DomainError]:
+        filters: dict[str, Any] | None = None,
+    ) -> Result[list[dict[str, Any]], DomainError]:
         """Search for similar vectors in collection.
 
         Args:

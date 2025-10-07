@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 from bu_superagent.application.ports.clock_port import ClockPort
 from bu_superagent.application.ports.embedding_port import EmbeddingPort
 from bu_superagent.application.ports.llm_port import LLMPort
@@ -14,6 +18,10 @@ from bu_superagent.infrastructure.time.system_clock import SystemClock
 from bu_superagent.infrastructure.vectorstore.chroma_vector_store import ChromaVectorStoreAdapter
 from bu_superagent.infrastructure.vectorstore.faiss_vector_store import FaissVectorStoreAdapter
 from bu_superagent.infrastructure.vectorstore.qdrant_vector_store import QdrantVectorStoreAdapter
+
+if TYPE_CHECKING:
+    from bu_superagent.domain.errors import DomainError
+    from bu_superagent.domain.types import Result
 
 
 def build_embedding(settings: AppSettings) -> EmbeddingPort:
@@ -129,7 +137,7 @@ def build_query_use_case(with_llm: bool = True, with_reranker: bool = False) -> 
     )
 
 
-def build_work_queue(settings: AppSettings):
+def build_work_queue(settings: AppSettings) -> Any:
     """Build work queue adapter for async task distribution.
 
     Returns:
@@ -142,17 +150,19 @@ def build_work_queue(settings: AppSettings):
     #     RedisWorkQueueAdapter,
     # )
     class FakeWorkQueue:
-        def enqueue(self, topic, payload):
+        def enqueue(self, topic: str, payload: dict[str, Any]) -> Result[str, DomainError]:
             from bu_superagent.domain.types import Result
 
             return Result.success(f"fake-{topic}-{hash(str(payload))}")
 
-        def dequeue_batch(self, topic, max_n):
+        def dequeue_batch(
+            self, topic: str, max_n: int
+        ) -> Result[list[dict[str, Any]], DomainError]:
             from bu_superagent.domain.types import Result
 
             return Result.success([])
 
-        def ack(self, topic, ack_ids):
+        def ack(self, topic: str, ack_ids: list[str]) -> Result[None, DomainError]:
             from bu_superagent.domain.types import Result
 
             return Result.success(None)
@@ -160,7 +170,7 @@ def build_work_queue(settings: AppSettings):
     return FakeWorkQueue()
 
 
-def build_blob_store(settings: AppSettings):
+def build_blob_store(settings: AppSettings) -> Any:
     """Build blob store adapter for large document storage.
 
     Returns:
@@ -173,12 +183,12 @@ def build_blob_store(settings: AppSettings):
     #     MinioBlobStoreAdapter,
     # )
     class FakeBlobStore:
-        def put(self, key, data, meta):
+        def put(self, key: str, data: bytes, meta: dict[str, Any]) -> Result[str, DomainError]:
             from bu_superagent.domain.types import Result
 
             return Result.success(key)
 
-        def get(self, key):
+        def get(self, key: str) -> Result[bytes, DomainError]:
             from bu_superagent.domain.types import Result
 
             return Result.success(b"")
@@ -186,7 +196,7 @@ def build_blob_store(settings: AppSettings):
     return FakeBlobStore()
 
 
-def build_telemetry(settings: AppSettings):
+def build_telemetry(settings: AppSettings) -> Any:
     """Build telemetry adapter for metrics and tracing.
 
     Returns:

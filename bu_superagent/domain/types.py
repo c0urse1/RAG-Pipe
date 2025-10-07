@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
 E = TypeVar("E", bound=BaseException)
@@ -45,4 +45,4 @@ class Chunk:
     doc_id: DocumentId
     text: str
     vector: Vector | None
-    meta: dict
+    meta: dict[str, Any]

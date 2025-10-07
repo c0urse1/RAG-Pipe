@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import Any
 
-from bu_superagent.application.ports import WorkQueuePort
+from bu_superagent.application.scalable_ports import WorkQueuePort
 from bu_superagent.domain.errors import DomainError
 from bu_superagent.domain.types import Result
 
@@ -77,7 +77,7 @@ class RedisWorkQueueAdapter(WorkQueuePort):
         except Exception as ex:
             raise WorkQueueError(f"Redis init failed: {ex}") from ex
 
-    def enqueue(self, topic: str, payload: dict) -> Result[str, DomainError]:
+    def enqueue(self, topic: str, payload: dict[str, Any]) -> Result[str, DomainError]:
         """Enqueue a task to topic stream.
 
         Args:
@@ -103,7 +103,7 @@ class RedisWorkQueueAdapter(WorkQueuePort):
         except Exception as ex:
             return Result.failure(WorkQueueError(f"enqueue failed: {ex}"))
 
-    def dequeue_batch(self, topic: str, max_n: int) -> Result[list[dict], DomainError]:
+    def dequeue_batch(self, topic: str, max_n: int) -> Result[list[dict[str, Any]], DomainError]:
         """Dequeue up to max_n tasks from topic.
 
         Uses consumer groups for parallel processing.

@@ -6,7 +6,7 @@ Why: Große Batches + GPU → hoher Durchsatz beim Ingest.
 from importlib import import_module
 from typing import Any
 
-from bu_superagent.application.ports import EmbeddingPort
+from bu_superagent.application.scalable_ports import EmbeddingPort
 from bu_superagent.domain.errors import DomainError, EmbeddingError
 from bu_superagent.domain.types import Result, Vector
 
@@ -106,7 +106,7 @@ class E5HFEmbeddingAdapter(EmbeddingPort):
 
             # Batch encode with GPU
             # sentence-transformers handles batching internally
-            embeddings = self._model.encode(
+            embeddings = self._model.encode(  # type: ignore[attr-defined]
                 prefixed,
                 batch_size=self._bs,
                 normalize_embeddings=True,  # L2 normalization
@@ -143,7 +143,7 @@ class E5HFEmbeddingAdapter(EmbeddingPort):
             prefixed = _prefix_e5_query(query)
 
             # Encode single query
-            embedding = self._model.encode(
+            embedding = self._model.encode(  # type: ignore[attr-defined]
                 prefixed,
                 normalize_embeddings=True,  # L2 normalization
                 show_progress_bar=False,
@@ -187,6 +187,7 @@ class E5HFEmbeddingAdapter(EmbeddingPort):
                 if not result.ok:
                     return result  # Propagate error
 
+                assert result.value is not None
                 all_vectors.extend(result.value)
 
             return Result.success(all_vectors)

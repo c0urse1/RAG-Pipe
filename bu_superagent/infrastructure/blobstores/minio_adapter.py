@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import Any
 
-from bu_superagent.application.ports import BlobStorePort
+from bu_superagent.application.scalable_ports import BlobStorePort
 from bu_superagent.domain.errors import DomainError
 from bu_superagent.domain.types import Result
 
@@ -96,7 +96,7 @@ class MinioBlobStoreAdapter(BlobStorePort):
         except Exception as ex:
             raise BlobStoreError(f"Bucket creation failed: {ex}") from ex
 
-    def put(self, key: str, data: bytes, meta: dict) -> Result[str, DomainError]:
+    def put(self, key: str, data: bytes, meta: dict[str, Any]) -> Result[str, DomainError]:
         """Put blob data with metadata.
 
         Args:
@@ -149,7 +149,7 @@ class MinioBlobStoreAdapter(BlobStorePort):
         except Exception as ex:
             return Result.failure(BlobStoreError(f"get failed: {ex}"))
 
-    def get_metadata(self, key: str) -> Result[dict, DomainError]:
+    def get_metadata(self, key: str) -> Result[dict[str, Any], DomainError]:
         """Get object metadata without downloading data.
 
         Args:

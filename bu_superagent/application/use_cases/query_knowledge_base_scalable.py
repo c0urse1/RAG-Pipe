@@ -4,7 +4,10 @@ Why: Multi-stage Retrieval (Vector → optional Hybrid RRF → optional MMR),
      Confidence-Gate als letzte Schranke.
 """
 
-from bu_superagent.application.ports import EmbeddingPort, VectorStorePort
+from typing import Any
+
+from bu_superagent.application.dtos import QueryRequest
+from bu_superagent.application.scalable_ports import EmbeddingPort, VectorStorePort
 from bu_superagent.domain.errors import (
     DomainError,
     LowConfidenceError,
@@ -48,7 +51,7 @@ class QueryKnowledgeBaseScalable:
         self.vs = vs
         self.lexical = lexical
 
-    def execute(self, req: any) -> Result[dict[str, any], DomainError]:  # type: ignore[misc]
+    def execute(self, req: QueryRequest) -> Result[dict[str, Any], DomainError]:
         """Execute query pipeline with hybrid fusion and confidence gate.
 
         Args:

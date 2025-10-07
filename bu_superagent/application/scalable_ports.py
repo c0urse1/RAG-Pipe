@@ -4,7 +4,7 @@ Why: Skalierung braucht Admin-Fähigkeiten (Shards/Replicas/Quantization),
      Queueing und Monitoring – alles als Ports, um Infra zu kapseln.
 """
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from bu_superagent.domain.errors import DomainError
 from bu_superagent.domain.types import Result, Vector
@@ -26,7 +26,7 @@ class VectorStorePort(Protocol):
         collection: str,
         ids: list[str],
         vectors: list[Vector],
-        metadata: list[dict],
+        metadata: list[dict[str, Any]],
     ) -> Result[None, DomainError]:
         """Upsert vectors with metadata into collection."""
         ...
@@ -36,8 +36,8 @@ class VectorStorePort(Protocol):
         collection: str,
         vector: Vector,
         top_k: int,
-        filters: dict | None = None,
-    ) -> Result[list[dict], DomainError]:
+        filters: dict[str, Any] | None = None,
+    ) -> Result[list[dict[str, Any]], DomainError]:
         """Search for similar vectors in collection."""
         ...
 
@@ -56,11 +56,13 @@ class VectorStoreAdminPort(Protocol):
         """Create or ensure collection exists with specified configuration."""
         ...
 
-    def set_quantization(self, name: str, kind: str, params: dict) -> Result[None, DomainError]:
+    def set_quantization(
+        self, name: str, kind: str, params: dict[str, Any]
+    ) -> Result[None, DomainError]:
         """Set quantization configuration for collection."""
         ...
 
-    def set_search_params(self, name: str, params: dict) -> Result[None, DomainError]:
+    def set_search_params(self, name: str, params: dict[str, Any]) -> Result[None, DomainError]:
         """Set search parameters for collection."""
         ...
 
@@ -68,11 +70,11 @@ class VectorStoreAdminPort(Protocol):
 class WorkQueuePort(Protocol):
     """Port for async work queue operations."""
 
-    def enqueue(self, topic: str, payload: dict) -> Result[str, DomainError]:
+    def enqueue(self, topic: str, payload: dict[str, Any]) -> Result[str, DomainError]:
         """Enqueue a task to topic. Returns task ID."""
         ...
 
-    def dequeue_batch(self, topic: str, max_n: int) -> Result[list[dict], DomainError]:
+    def dequeue_batch(self, topic: str, max_n: int) -> Result[list[dict[str, Any]], DomainError]:
         """Dequeue up to max_n tasks from topic."""
         ...
 
@@ -84,7 +86,7 @@ class WorkQueuePort(Protocol):
 class BlobStorePort(Protocol):
     """Port for blob storage operations."""
 
-    def put(self, key: str, data: bytes, meta: dict) -> Result[str, DomainError]:
+    def put(self, key: str, data: bytes, meta: dict[str, Any]) -> Result[str, DomainError]:
         """Put blob data with metadata. Returns storage key."""
         ...
 
@@ -96,10 +98,10 @@ class BlobStorePort(Protocol):
 class TelemetryPort(Protocol):
     """Port for telemetry and monitoring."""
 
-    def incr(self, name: str, tags: dict) -> None:
+    def incr(self, name: str, tags: dict[str, Any] | None = None) -> None:
         """Increment a counter metric."""
         ...
 
-    def observe(self, name: str, value: float, tags: dict) -> None:
+    def observe(self, name: str, value: float, tags: dict[str, Any] | None = None) -> None:
         """Observe a value for histogram/summary metric."""
         ...

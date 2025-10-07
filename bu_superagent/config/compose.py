@@ -1,8 +1,18 @@
-"""Dependency injection container with environment-driven wiring.
+"""Depfrom typing import Any, TYPE_CHECKING
+
+from bu_superagent.application.scalable_ports import (
+    BlobStorePort,
+    EmbeddingPort,
+    TelemetryPort,
+    VectorStorePort,
+    WorkQueuePort,
+)njection container with environment-driven wiring.
 
 Why: Einzige Stelle mit Env; Feature-Flags erlauben toggles
      (Hybrid, Quantization, Shards).
 """
+
+from typing import TYPE_CHECKING, Any
 
 from bu_superagent.application.ports import (
     BlobStorePort,
@@ -12,6 +22,16 @@ from bu_superagent.application.ports import (
     WorkQueuePort,
 )
 from bu_superagent.config.settings import AppSettings
+from bu_superagent.domain.errors import DomainError
+from bu_superagent.domain.types import Result
+
+if TYPE_CHECKING:
+    from bu_superagent.application.use_cases.ingest_documents_parallel import (
+        IngestDocumentsParallel,
+    )
+    from bu_superagent.application.use_cases.query_knowledge_base_scalable import (
+        QueryKnowledgeBaseScalable,
+    )
 
 
 class Container:
@@ -73,7 +93,7 @@ class Container:
 
     # ===== Use Cases =====
 
-    def get_query_use_case(self):
+    def get_query_use_case(self) -> "QueryKnowledgeBaseScalable":
         """Build query use case with all dependencies."""
         from bu_superagent.application.use_cases.query_knowledge_base_scalable import (
             QueryKnowledgeBaseScalable,
@@ -85,7 +105,7 @@ class Container:
             lexical=None,  # TODO: lexical search adapter for hybrid mode
         )
 
-    def get_ingest_use_case(self):
+    def get_ingest_use_case(self) -> "IngestDocumentsParallel":
         """Build ingest use case with all dependencies."""
         from bu_superagent.application.use_cases.ingest_documents_parallel import (
             IngestDocumentsParallel,
@@ -194,7 +214,7 @@ class Container:
         if hasattr(adapter, "store_text"):
             adapter.store_text = self.settings.store_text_payload
 
-        return adapter
+        return adapter  # type: ignore[return-value]  # Legacy adapter
 
     def _build_faiss_adapter(self) -> VectorStorePort:
         """Build FAISS adapter (in-memory, for testing).
@@ -208,7 +228,7 @@ class Container:
 
         adapter = FaissVectorStoreAdapter()
         adapter.collection = self.settings.collection
-        return adapter
+        return adapter  # type: ignore[return-value]  # Legacy adapter
 
     def _build_work_queue(self) -> WorkQueuePort:
         """Build work queue adapter based on settings.workqueue_backend.
@@ -253,16 +273,17 @@ class Container:
         Returns:
             Fake WorkQueuePort implementation
         """
-        from bu_superagent.domain.types import Result
 
         class FakeWorkQueue:
-            def enqueue(self, topic, payload):
+            def enqueue(self, topic: str, payload: dict[str, Any]) -> Result[str, DomainError]:
                 return Result.success(f"fake-{topic}-{hash(str(payload))}")
 
-            def dequeue_batch(self, topic, max_n):
+            def dequeue_batch(
+                self, topic: str, max_n: int
+            ) -> Result[list[dict[str, Any]], DomainError]:
                 return Result.success([])
 
-            def ack(self, topic, ack_ids):
+            def ack(self, topic: str, ack_ids: list[str]) -> Result[None, DomainError]:
                 return Result.success(None)
 
         return FakeWorkQueue()
@@ -313,13 +334,12 @@ class Container:
         Returns:
             Fake BlobStorePort implementation
         """
-        from bu_superagent.domain.types import Result
 
         class FakeBlobStore:
-            def put(self, key, data, meta):
+            def put(self, key: str, data: bytes, meta: dict[str, Any]) -> Result[str, DomainError]:
                 return Result.success(key)
 
-            def get(self, key):
+            def get(self, key: str) -> Result[bytes, DomainError]:
                 return Result.success(b"")
 
         return FakeBlobStore()
@@ -356,10 +376,10 @@ class Container:
         """
 
         class NoopTelemetry:
-            def incr(self, name, tags):
+            def incr(self, name: str, tags: dict[str, Any] | None = None) -> None:
                 pass
 
-            def observe(self, name, value, tags):
+            def observe(self, name: str, value: float, tags: dict[str, Any] | None = None) -> None:
                 pass
 
         return NoopTelemetry()
@@ -385,7 +405,7 @@ def build_container(settings: AppSettings | None = None) -> Container:
     return Container(settings)
 
 
-def get_query_use_case(settings: AppSettings | None = None):
+def get_query_use_case(settings: AppSettings | None = None) -> "QueryKnowledgeBaseScalable":
     """Quick access to query use case (backward compatibility).
 
     Args:
@@ -397,7 +417,7 @@ def get_query_use_case(settings: AppSettings | None = None):
     return build_container(settings).get_query_use_case()
 
 
-def get_ingest_use_case(settings: AppSettings | None = None):
+def get_ingest_use_case(settings: AppSettings | None = None) -> "IngestDocumentsParallel":
     """Quick access to ingest use case (backward compatibility).
 
     Args:

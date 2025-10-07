@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import Any
 
-from bu_superagent.application.ports import TelemetryPort
+from bu_superagent.application.scalable_ports import TelemetryPort
 
 
 @dataclass
@@ -103,7 +103,7 @@ class OpenTelemetryAdapter(TelemetryPort):
             # Allows running without opentelemetry-sdk installed
             self._meter = None
 
-    def incr(self, name: str, tags: dict) -> None:
+    def incr(self, name: str, tags: dict[str, Any] | None = None) -> None:
         """Increment a counter metric.
 
         Args:
@@ -133,7 +133,7 @@ class OpenTelemetryAdapter(TelemetryPort):
             # Gracefully handle metric errors (never crash business logic)
             pass
 
-    def observe(self, name: str, value: float, tags: dict) -> None:
+    def observe(self, name: str, value: float, tags: dict[str, Any] | None = None) -> None:
         """Observe a value for histogram/summary metric.
 
         Args:

@@ -4,7 +4,10 @@ Why: Ingestion in 512er-Batches (GPU-freundlich), strikt Result-basiert,
      Queue-fähig (optional wq.enqueue im Orchestrator-Use-Case).
 """
 
-from bu_superagent.application.ports import EmbeddingPort, VectorStorePort, WorkQueuePort
+from typing import Any
+
+from bu_superagent.application.dtos import IngestRequest
+from bu_superagent.application.scalable_ports import EmbeddingPort, VectorStorePort, WorkQueuePort
 from bu_superagent.domain.errors import DomainError, ValidationError
 from bu_superagent.domain.types import Result
 
@@ -23,7 +26,7 @@ class IngestDocumentsParallel:
         self.vs = vs
         self.wq = wq
 
-    def plan(self, req: any) -> Result[list[dict[str, any]], ValidationError]:  # type: ignore[misc]
+    def plan(self, req: IngestRequest) -> Result[list[dict[str, Any]], ValidationError]:
         """Plan ingestion by splitting documents into GPU-friendly batches.
 
         Args:
@@ -49,7 +52,7 @@ class IngestDocumentsParallel:
 
         return Result.success(batches)
 
-    def execute_batch(self, collection: str, batch: dict[str, any]) -> Result[None, DomainError]:  # type: ignore[misc]
+    def execute_batch(self, collection: str, batch: dict[str, Any]) -> Result[None, DomainError]:
         """Execute a single batch: embed texts and upsert to vector store.
 
         Args:

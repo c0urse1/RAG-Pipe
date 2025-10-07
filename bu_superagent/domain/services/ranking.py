@@ -30,7 +30,7 @@ def mmr(
             continue
 
         # naive diversity proxy: penalize same doc prefix
-        def mmr_score(item):
+        def mmr_score(item: tuple[str, float]) -> float:
             sim_to_sel = max(
                 1.0 if item[0].split(":")[0] == s[0].split(":")[0] else 0.0 for s in selected
             )
@@ -52,7 +52,7 @@ def rrf(ranks: list[list[tuple[str, int]]], k: int = 60) -> list[tuple[str, floa
     Returns:
         Fused ranking as list of (doc_id, score) tuples sorted by score descending
     """
-    scores = {}
+    scores: dict[str, float] = {}
     for ranklist in ranks:
         for doc_id, rank in ranklist:
             scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank)

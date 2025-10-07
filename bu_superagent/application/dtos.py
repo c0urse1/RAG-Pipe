@@ -4,6 +4,7 @@ Why: Saubere Input-Verträge; Query erweitert um Hybrid/Reranker Flags.
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -12,7 +13,7 @@ class IngestRequest:
 
     collection: str
     shard_key: str
-    docs: list[dict]  # each: {"id": str, "text": str, "meta": dict}
+    docs: list[dict[str, Any]]  # each: {"id": str, "text": str, "meta": dict}
 
 
 @dataclass
