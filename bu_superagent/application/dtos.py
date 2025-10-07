@@ -1,6 +1,6 @@
-"""Application DTOs for ingest and query with hybrid support.
+"""Application DTOs for ingest and query.
 
-Why: Saubere Input-Verträge; Query erweitert um Hybrid/Reranker Flags.
+Why: Clean input contracts for scalable use cases.
 """
 
 from dataclasses import dataclass
@@ -23,7 +23,5 @@ class QueryRequest:
     collection: str
     question: str
     top_k: int = 5
-    use_mmr: bool = True
     use_reranker: bool = False
-    use_hybrid: bool = False
     confidence_threshold: float = 0.25
