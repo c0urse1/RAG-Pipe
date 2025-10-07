@@ -3,7 +3,7 @@
 Why: Early safety nets for Precision/Recall-critical logic.
 """
 
-from bu_superagent.domain.similarity import cosine, deduplicate_by_cosine, zscore_normalize
+from bu_superagent.domain.similarity import cosine, zscore_normalize
 
 
 def test_cosine_similarity():
@@ -15,33 +15,6 @@ def test_cosine_similarity():
     u = (1.0, 0.0, 0.0)
     v = (0.0, 1.0, 0.0)
     assert abs(cosine(u, v) - 0.0) < 1e-6
-
-
-def test_dedup_keeps_far_vectors():
-    """Test deduplication keeps vectors that are sufficiently different."""
-    items = [
-        ("a", (1.0, 0.0, 0.0)),
-        ("b", (0.0, 1.0, 0.0)),  # orthogonal to a, should be kept
-        ("c", (1.0, 0.01, 0.0)),  # very similar to a, should be removed
-    ]
-    result = deduplicate_by_cosine(items, threshold=0.95)
-    assert len(result) == 2
-    assert result[0][0] == "a"
-    assert result[1][0] == "b"
-
-
-def test_dedup_empty_list():
-    """Test deduplication with empty input."""
-    result = deduplicate_by_cosine([], threshold=0.95)
-    assert result == []
-
-
-def test_dedup_single_item():
-    """Test deduplication with single item."""
-    items = [("a", (1.0, 0.0, 0.0))]
-    result = deduplicate_by_cosine(items, threshold=0.95)
-    assert len(result) == 1
-    assert result[0][0] == "a"
 
 
 def test_zscore_normalize_stability():

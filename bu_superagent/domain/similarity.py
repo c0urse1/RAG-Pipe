@@ -25,25 +25,6 @@ def cosine(u: Vector, v: Vector) -> Score:
     return dot / (nu * nv)
 
 
-def deduplicate_by_cosine(
-    items: list[tuple[str, Vector]], threshold: float = 0.95
-) -> list[tuple[str, Vector]]:
-    """Deduplicate items by cosine similarity threshold.
-
-    Args:
-        items: List of (id, vector) tuples
-        threshold: Cosine similarity threshold (default 0.95)
-
-    Returns:
-        Deduplicated list maintaining first occurrence of similar items
-    """
-    kept: list[tuple[str, Vector]] = []
-    for id_i, vec_i in items:
-        if all(cosine(vec_i, vj) < threshold for _, vj in kept):
-            kept.append((id_i, vec_i))
-    return kept
-
-
 def zscore_normalize(scores: list[Score]) -> list[Score]:
     """Normalize scores using z-score normalization.
 

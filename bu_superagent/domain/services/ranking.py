@@ -1,72 +1,117 @@
-"""Pure ranking policies for scaling.
+# bu_superagent/domain/services/ranking.py
+# Pure domain services: no I/O, deterministic, no external libraries.
+from __future__ import annotations
 
-Why: MMR/RRF/Confidence are purely deterministic → Domain stays independent of Infra.
-"""
+import math
+from collections.abc import Sequence
 
-from bu_superagent.domain.types import Score
+from bu_superagent.domain.models import RetrievedChunk
+
+
+def _cos_sim(a: Sequence[float], b: Sequence[float]) -> float:
+    """
+    Compute cosine similarity without external libs.
+    Works with non-perfectly normalized vectors by normalizing on the fly.
+    """
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
+    na = math.sqrt(sum(x * x for x in a)) or 1.0
+    nb = math.sqrt(sum(y * y for y in b)) or 1.0
+    return dot / (na * nb)
+
+
+def deduplicate_by_cosine(
+    chunks: Sequence[RetrievedChunk],
+    threshold: float = 0.95,
+) -> list[RetrievedChunk]:
+    """
+    Remove near-duplicates by cosine similarity (>= threshold).
+    Falls back to text-based exact match if vectors are missing.
+
+    - O(n^2) but n is small after initial ANN retrieval; acceptable for domain.
+    - Keeps the first occurrence; drops later ones considered near-duplicates.
+    """
+    seen: list[RetrievedChunk] = []
+    for c in chunks:
+        is_dup = False
+        # Prefer vector-based duplicate detection if vectors present.
+        if c.vector is not None:
+            for s in seen:
+                if s.vector is None:
+                    continue
+                if _cos_sim(c.vector, s.vector) >= threshold:
+                    is_dup = True
+                    break
+        else:
+            # Fallback: dedup by normalized text if no vector available
+            norm_c = (c.text or "").strip().casefold()
+            for s in seen:
+                if (s.text or "").strip().casefold() == norm_c and norm_c != "":
+                    is_dup = True
+                    break
+
+        if not is_dup:
+            seen.append(c)
+    return seen
 
 
 def mmr(
-    candidates: list[tuple[str, Score]], lambda_diversity: float = 0.7, k: int = 10
-) -> list[tuple[str, Score]]:
-    """Maximal Marginal Relevance for diversity-aware ranking.
-
-    Assumes candidates sorted by score desc; uses id-only diversity proxy for
-    simplicity in domain.
-
-    Args:
-        candidates: List of (id, score) tuples sorted by score descending
-        lambda_diversity: Trade-off parameter (0=diversity, 1=relevance)
-        k: Number of items to select
-
-    Returns:
-        Top-k items balancing relevance and diversity
+    query_vec: Sequence[float],
+    candidates: Sequence[RetrievedChunk],
+    top_k: int,
+    lambda_mult: float = 0.5,
+) -> list[RetrievedChunk]:
     """
-    selected: list[tuple[str, Score]] = []
-    remaining = candidates[:]
-    while remaining and len(selected) < k:
-        if not selected:
-            selected.append(remaining.pop(0))
-            continue
+    Maximal Marginal Relevance (MMR) selection with pure-Python cosine.
+    Assumes candidate vectors are L2-ish; we normalize on-the-fly anyway.
 
-        # naive diversity proxy: penalize same doc prefix
-        def mmr_score(item: tuple[str, float]) -> float:
-            sim_to_sel = max(
-                1.0 if item[0].split(":")[0] == s[0].split(":")[0] else 0.0 for s in selected
-            )
-            return lambda_diversity * item[1] - (1 - lambda_diversity) * sim_to_sel
-
-        best = max(remaining, key=mmr_score)
-        remaining.remove(best)
-        selected.append(best)
-    return selected
-
-
-def rrf(ranks: list[list[tuple[str, int]]], k: int = 60) -> list[tuple[str, float]]:
-    """Reciprocal Rank Fusion for hybrid (lexical + vector) retrieval.
-
-    Args:
-        ranks: List of rank lists, each containing (doc_id, rank) tuples
-        k: Constant for RRF formula (default 60)
-
-    Returns:
-        Fused ranking as list of (doc_id, score) tuples sorted by score descending
+    NOTE:
+    - Keep here only if the product actually uses MMR.
+    - If the application removes MMR, delete this function and its tests.
     """
-    scores: dict[str, float] = {}
-    for ranklist in ranks:
-        for doc_id, rank in ranklist:
-            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank)
-    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    if top_k <= 0:
+        return []
 
+    # Precompute candidate similarities to the query
+    sims: list[tuple[int, float]] = []
+    for idx, c in enumerate(candidates):
+        if c.vector is None:
+            sims.append((idx, -1.0))
+        else:
+            sims.append((idx, _cos_sim(query_vec, c.vector)))
 
-def passes_confidence(top_score: Score, threshold: Score) -> bool:
-    """Check if top score meets confidence threshold.
+    selected: list[int] = []
+    remaining: list[int] = [i for i in range(len(candidates))]
 
-    Args:
-        top_score: The highest score from retrieval
-        threshold: Minimum acceptable confidence score
+    while remaining and len(selected) < top_k:
+        best_idx = None
+        best_score = -1.0
 
-    Returns:
-        True if top_score >= threshold, False otherwise
-    """
-    return top_score >= threshold
+        for i in remaining:
+            query_rel = sims[i][1]
+            diversity = 0.0
+            if selected:
+                # max similarity to any already selected item (diversity penalty)
+                max_sim_to_selected = max(
+                    [
+                        (
+                            _cos_sim(
+                                candidates[i].vector or (),
+                                candidates[j].vector or (),
+                            )
+                            if (candidates[i].vector and candidates[j].vector)
+                            else 0.0
+                        )
+                        for j in selected
+                    ]
+                )
+                diversity = max_sim_to_selected
+
+            score = lambda_mult * query_rel - (1.0 - lambda_mult) * diversity
+            if score > best_score:
+                best_score = score
+                best_idx = i
+
+        selected.append(best_idx)  # type: ignore[arg-type]
+        remaining = [i for i in remaining if i != best_idx]
+
+    return [candidates[i] for i in selected]
