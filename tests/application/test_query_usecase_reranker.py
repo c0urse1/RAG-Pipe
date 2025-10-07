@@ -86,7 +86,6 @@ def test_reranker_reorders_candidates():
         top_k=2,
         use_reranker=True,
         pre_rerank_k=4,
-        mmr=False,  # Disable MMR for clearer test
         confidence_threshold=0.0,  # Bypass confidence gate
     )
     result = uc.execute(req)
@@ -129,7 +128,6 @@ def test_reranker_disabled_uses_retrieval_order():
         question="test",
         top_k=2,
         use_reranker=False,  # Disabled
-        mmr=False,
         confidence_threshold=0.0,
     )
     result = uc.execute(req)
@@ -185,7 +183,6 @@ def test_reranker_none_with_flag_skips_reranking():
         question="test",
         top_k=2,
         use_reranker=True,  # Flag enabled but port is None
-        mmr=False,
         confidence_threshold=0.0,
     )
     result = uc.execute(req)
@@ -215,8 +212,8 @@ def test_reranker_with_empty_candidates():
     assert "no candidates" in str(result.error).lower()
 
 
-def test_reranker_integration_with_mmr():
-    """Test that reranking happens BEFORE MMR/dedup in the pipeline."""
+def test_reranker_integration_with_dedup():
+    """Test that reranking happens BEFORE deduplication in the pipeline."""
     # Arrange: Create chunks that would be reordered by reranker
     chunks = [
         RetrievedChunk(
@@ -224,7 +221,7 @@ def test_reranker_integration_with_mmr():
             text=f"text{i}",
             metadata={"source": "doc"},
             score=0.8 - i * 0.1,
-            vector=[float(i), 0.0, 0.0],  # Vectors for MMR
+            vector=[float(i), 0.0, 0.0],  # Vectors for diversity
         )
         for i in range(5)
     ]
@@ -244,13 +241,11 @@ def test_reranker_integration_with_mmr():
         question="test",
         top_k=3,
         use_reranker=True,
-        mmr=True,  # MMR enabled
-        mmr_lambda=0.5,
         confidence_threshold=0.0,
     )
     result = uc.execute(req)
 
-    # Assert: Reranking should happen before MMR
+    # Assert: Reranking should happen before dedup
     # Top chunk after reranking should be chunk4 (highest reranker score)
     assert result.ok
     # At least the first result should reflect reranking

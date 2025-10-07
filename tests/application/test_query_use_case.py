@@ -156,44 +156,6 @@ class TestQueryKnowledgeBase:
         assert len(result.value.citations) == 1
         assert result.value.citations[0].chunk_id == "c1"
 
-    def test_mmr_enabled(self) -> None:
-        """Should apply MMR when enabled."""
-        chunks = [
-            make_chunk("c1", 0.9, vector=[1.0, 0.0, 0.0]),
-            make_chunk("c2", 0.85, vector=[0.99, 0.01, 0.0]),  # Similar to c1
-            make_chunk("c3", 0.8, vector=[0.0, 1.0, 0.0]),  # Diverse
-        ]
-        uc = QueryKnowledgeBase(
-            embedding=FakeEmbedding(),
-            vector_store=FakeVectorStore(chunks=chunks),
-            llm=FakeLLM(),
-        )
-        result = uc.execute(QueryRequest(question="Test", top_k=2, mmr=True, mmr_lambda=0.5))
-
-        assert result.ok
-        assert result.value is not None
-        # Should select c1 and c3 (diverse) over c1 and c2 (similar)
-        assert len(result.value.citations) == 2
-
-    def test_mmr_disabled(self) -> None:
-        """Should use simple top-k when MMR disabled."""
-        chunks = [
-            make_chunk("c1", 0.9, vector=[1.0, 0.0, 0.0]),
-            make_chunk("c2", 0.85, vector=[0.0, 1.0, 0.0]),  # Diverse
-            make_chunk("c3", 0.8, vector=[0.0, 0.0, 1.0]),  # Diverse
-        ]
-        uc = QueryKnowledgeBase(
-            embedding=FakeEmbedding(),
-            vector_store=FakeVectorStore(chunks=chunks),
-            llm=FakeLLM(),
-        )
-        result = uc.execute(QueryRequest(question="Test", top_k=2, mmr=False))
-
-        assert result.ok
-        assert result.value is not None
-        # Should get top 2 after deduplication (all diverse, so all survive)
-        assert len(result.value.citations) == 2
-
     def test_deduplication_applied(self) -> None:
         """Should deduplicate similar chunks."""
         chunks = [

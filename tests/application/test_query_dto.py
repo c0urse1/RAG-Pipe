@@ -11,9 +11,7 @@ class TestQueryRequest:
 
         assert req.question == "What is RAG?"
         assert req.top_k == 5
-        assert req.mmr is True
-        assert req.mmr_lambda == 0.5
-        assert req.confidence_threshold == 0.35
+        assert req.confidence_threshold == 0.30
         assert req.use_reranker is False  # Default: disabled for performance
         assert req.pre_rerank_k == 20  # Default candidate pool for reranking
 
@@ -22,18 +20,16 @@ class TestQueryRequest:
         req = QueryRequest(
             question="Test question",
             top_k=10,
-            mmr=False,
-            mmr_lambda=0.8,
             confidence_threshold=0.5,
-            use_reranker=False,
+            use_reranker=True,
+            pre_rerank_k=30,
         )
 
         assert req.question == "Test question"
         assert req.top_k == 10
-        assert req.mmr is False
-        assert req.mmr_lambda == 0.8
         assert req.confidence_threshold == 0.5
-        assert req.use_reranker is False
+        assert req.use_reranker is True
+        assert req.pre_rerank_k == 30
 
     def test_query_request_is_frozen(self) -> None:
         """QueryRequest should be immutable."""

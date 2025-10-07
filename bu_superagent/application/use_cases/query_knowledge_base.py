@@ -1,11 +1,9 @@
 # bu_superagent/application/use_cases/query_knowledge_base.py
 from __future__ import annotations
 
-from collections.abc import Sequence
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from bu_superagent.application.dto.query_dto import QueryRequest
+from bu_superagent.application.dto.query_dto import QueryRequest, RAGAnswer
 from bu_superagent.application.ports.embedding_port import EmbeddingPort
 from bu_superagent.application.ports.llm_port import LLMPort
 from bu_superagent.application.ports.vector_store_port import VectorStorePort
@@ -13,23 +11,18 @@ from bu_superagent.domain.errors import (
     EmbeddingError,
     LLMError,
     LowConfidenceError,
+    RerankerError,
     RetrievalError,
     ValidationError,
     VectorStoreError,
 )
-from bu_superagent.domain.models import RetrievedChunk
-from bu_superagent.domain.result import Result
+from bu_superagent.domain.models import Citation
 from bu_superagent.domain.services.ranking import deduplicate_by_cosine
+from bu_superagent.domain.types import Result
 
 if TYPE_CHECKING:
     # Optional: only if this port exists in your repo
     from bu_superagent.application.ports.reranker_port import RerankerPort
-
-
-@dataclass(frozen=True)
-class RAGAnswer:
-    text: str
-    sources: Sequence[RetrievedChunk]
 
 
 class QueryKnowledgeBase:
@@ -76,9 +69,15 @@ class QueryKnowledgeBase:
         # 4) Optional rerank (if provided and requested)
         if self.reranker and req.use_reranker:
             try:
-                candidates = list(self.reranker.rerank(req.question, candidates))
+                # Get relevance scores and re-sort candidates
+                texts = [c.text for c in candidates]
+                scores = self.reranker.score(req.question, texts)
+                # Pair scores with candidates and sort descending by score
+                scored_pairs = list(zip(scores, candidates, strict=True))
+                scored_pairs.sort(key=lambda x: x[0], reverse=True)
+                candidates = [pair[1] for pair in scored_pairs]
             except Exception as ex:
-                return Result.failure(VectorStoreError(f"rerank failed: {ex}"))
+                return Result.failure(RerankerError(f"rerank failed: {ex}"))
 
         # 5) Dedup & slice top_k
         deduped = deduplicate_by_cosine(candidates, threshold=0.95)
@@ -87,16 +86,29 @@ class QueryKnowledgeBase:
         # 6) Confidence gate
         top_score = final[0].score if final and final[0].score is not None else 0.0
         if not final or top_score < req.confidence_threshold:
+            msg = f"top score {top_score:.3f} below threshold {req.confidence_threshold:.3f}"
             return Result.failure(
                 LowConfidenceError(
-                    f"top score {top_score:.3f} below threshold {req.confidence_threshold:.3f}"
+                    message=msg,
+                    top_score=top_score,
+                    threshold=req.confidence_threshold,
                 )
             )
 
-        # 7) Answer: extractive fallback or generative via LLM
+        # 7) Build citations from final chunks
+        citations = [
+            Citation(
+                chunk_id=c.id,
+                source=c.metadata.get("source_path", "unknown"),
+                score=c.score or 0.0,
+            )
+            for c in final
+        ]
+
+        # 8) Answer: extractive fallback or generative via LLM
         if self.llm is None:
             text = "\n\n".join(c.text for c in final if (c.text or "").strip())
-            return Result.success(RAGAnswer(text=text, sources=final))
+            return Result.success(RAGAnswer(text=text, citations=citations))
 
         try:
             ctx = "\n\n".join(
@@ -109,6 +121,6 @@ class QueryKnowledgeBase:
                 "Answer:"
             )
             text = self.llm.generate(prompt)
-            return Result.success(RAGAnswer(text=text, sources=final))
+            return Result.success(RAGAnswer(text=text, citations=citations))
         except Exception as ex:
             return Result.failure(LLMError(f"llm generation failed: {ex}"))
