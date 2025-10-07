@@ -1,4 +1,5 @@
-"""Query DTOs for RAG pipeline requests and responses."""
+# bu_superagent/application/dto/query_dto.py
+from __future__ import annotations
 
 from dataclasses import dataclass
 
@@ -7,15 +8,21 @@ from bu_superagent.domain.models import Citation
 
 @dataclass(frozen=True)
 class QueryRequest:
-    """Request for RAG query with retrieval and generation parameters."""
+    """
+    DTO for querying the knowledge base.
+
+    - question: user question (non-empty)
+    - top_k: number of chunks to return for answering
+    - pre_rerank_k: how many candidates to fetch before dedup and optional rerank
+    - use_reranker: whether to apply the optional cross-encoder reranker (if provided)
+    - confidence_threshold: minimum top score required to proceed with answering
+    """
 
     question: str
     top_k: int = 5
-    mmr: bool = True  # Use Maximal Marginal Relevance for diversity
-    mmr_lambda: float = 0.5  # Trade-off: 0=diversity, 1=relevance
-    confidence_threshold: float = 0.35  # Minimum confidence for answering
-    use_reranker: bool = False  # Apply cross-encoder reranking (if reranker port provided)
-    pre_rerank_k: int = 20  # Candidate pool size for reranking (>= top_k; ignored if !use_reranker)
+    pre_rerank_k: int = 20
+    use_reranker: bool = False
+    confidence_threshold: float = 0.30
 
 
 @dataclass(frozen=True)
