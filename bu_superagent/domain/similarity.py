@@ -1,7 +1,7 @@
-"""Pure similarity and deduplication functions for scaling.
+"""Pure similarity and normalization functions.
 
-Why: Dedup/Normalization are pure functions → perfect for Domain.
-Preparation for Hybrid-Fusion and Confidence-Gate.
+Why: Cosine similarity and z-score normalization are deterministic,
+     pure functions with no I/O → belong in Domain layer.
 """
 
 from math import sqrt
